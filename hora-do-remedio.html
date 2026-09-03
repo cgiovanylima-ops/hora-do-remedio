@@ -297,6 +297,7 @@ function loadState() {
 }
 function saveState() {
   try { store.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
+  schedulePushSync();
 }
 let state = loadState();
 let ui = { tab: "inicio", alertActive: {}, alertHidden: {}, modalsOpen: 0, editingMedId: null, confirmCb: null };
@@ -540,6 +541,7 @@ function savePerfil(isEdit) {
     pedirPermissaoNotif();
   }
   saveState(); closeModal(); renderAll();
+  try { if (PUSH.appId) pushInit(); } catch (e) {}
   toast("✔ Perfil salvo" + (isEdit ? "" : " — bem-vindo(a), " + state.patient.nome + "!"));
   if (!isEdit && state.meds.length === 0) {
     setTimeout(() => openMedForm(null), 450);
@@ -1069,7 +1071,7 @@ function renderAjustes() {
       ${[5, 10, 15, 30, 60].map(m => `<option value="${m}"${c.repetirMin === m ? " selected" : ""}>${m} minutos</option>`).join("")}
     </select>
     <button class="btn ghost block" style="margin-top:14px" data-action="test-alert">🔔 Testar alerta</button>
-    <p class="hint">💡 Dica: mantenha esta página aberta no celular para ouvir os alertas. Você também pode adicionar à tela inicial (menu do navegador → “Adicionar à tela inicial”).</p>
+    <p class="hint">💡 Dica: mantenha esta página aberta no celular para ouvir os alertas. Com o <b>push ativado</b> (veja como no guia PUSH), o celular avisa com som <b>mesmo com o app fechado</b>. Você também pode adicionar à tela inicial (menu do navegador → “Adicionar à tela inicial”).</p>
   </div>
 
   <div class="card">
@@ -1334,6 +1336,7 @@ function openConfirm(titulo, msg, cor, onYes) {
 
 /* ---------- delegação de eventos ---------- */
 document.addEventListener("click", e => {
+  if (!ui.pushAsk && PUSH.appId) { ui.pushAsk = true; try { pedirPermissaoPush(); } catch (err) {} }
   const el = e.target.closest("[data-action]");
   if (!el) return;
   const a = el.dataset.action;
@@ -1400,6 +1403,7 @@ document.addEventListener("change", e => {
     state.config.controlOn = e.target.checked;
     ui.alertActive = {}; ui.alertHidden = {};
     saveState(); renderAll();
+    if (e.target.checked) { try { pushInit(); } catch (err) {} }
     toast(e.target.checked ? "🔔 Controle LIGADO — alertas e confirmações ativos" : "📋 Modo Agenda — apenas a lista de horários");
   }
   if (e.target.id === "tgSom") {
@@ -1428,6 +1432,105 @@ function imprimirAgenda() {
   } catch (e) {
     toast("Impressão indisponível neste navegador");
   }
+}
+
+/* ---------- notificações push com app fechado (opcional) ----------
+   COMO ATIVAR (2 configurações, depois é só recarregar):
+   1) OneSignal (gratuito): crie o app em one.onesignal.com e cole o App ID abaixo.
+   2) Cloudflare (gratuito): publique o arquivo push-worker.js como Worker
+      (com KV ligado e Cron de 1 min) e cole a URL dele abaixo.
+   Deixe vazio para manter o comportamento atual (bip com o app aberto). */
+const PUSH = {
+  appId: "30f95bde-2f59-44b5-9636-9a811a173d9f",   // ← OneSignal App ID (já preenchido)
+  workerUrl: "https://med-reminder.cgiovany-lima.workers.dev"   // ← Agendador Cloudflare (já preenchido)
+};
+
+let pushDeb = null, pushInited = false;
+function schedulePushSync() {
+  if (!PUSH.workerUrl || !PUSH.appId) return;
+  clearTimeout(pushDeb);
+  pushDeb = setTimeout(() => { try { pushSync(); } catch (e) {} }, 1500);
+}
+function pushExternalId() {
+  if (!state.config.pushId) {
+    const base = (state.patient ? state.patient.nome : "paciente")
+      .toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+    state.config.pushId = base + "_" + Date.now().toString(36);
+    saveState();
+  }
+  return state.config.pushId;
+}
+function loadOneSignalSdk() {
+  return new Promise((res) => {
+    if (window.OneSignal) { res(); return; }
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    if (!document.querySelector('script[src*="OneSignalSDK.page.js"]')) {
+      const s = document.createElement("script");
+      s.src = "https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js";
+      s.async = true;
+      s.onload = res;
+      s.onerror = () => res();
+      document.head.appendChild(s);
+    } else res();
+  });
+}
+async function pushInit() {
+  if (pushInited || !PUSH.appId || !state.patient) return;
+  pushInited = true;
+  try {
+    await loadOneSignalSdk();
+    await new Promise((resolve) => {
+      if (window.OneSignal && window.OneSignal.init) { resolve(); return; }
+      const t = setTimeout(resolve, 9000);
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      window.OneSignalDeferred.push(async (OS) => {
+        clearTimeout(t);
+        try { await OS.init({ appId: PUSH.appId }); } catch (e) {}
+        resolve();
+      });
+    });
+    const OS = window.OneSignal;
+    if (!OS) return;
+    try { await OS.login(pushExternalId()); } catch (e) {}
+    schedulePushSync();
+  } catch (e) { /* silencioso: o app continua normal sem push */ }
+}
+function pedirPermissaoPush() {
+  try {
+    const OS = window.OneSignal;
+    if (!OS || !PUSH.appId || !OS.Notifications) return;
+    if (OS.Notifications.permission === "granted") return;
+    if (OS.Notifications.requestPermission) OS.Notifications.requestPermission();
+  } catch (e) {}
+}
+function pushSync() {
+  if (!PUSH.workerUrl || !PUSH.appId || !state.patient) return;
+  const rows = {};
+  const dk = hoje();
+  state.meds.forEach(med => {
+    scheduleOf(med).forEach(h => {
+      const r = rowOf(med, dk, h);
+      if (r) rows[med.id + "|" + h] = { st: r.st, adiar: r.adiar || 0 };
+    });
+  });
+  const payload = {
+    id: pushExternalId(),
+    tzOffsetMin: -new Date().getTimezoneOffset(),
+    paciente: state.patient.nome,
+    meds: state.meds.map(m => ({
+      id: m.id, nome: m.nome, dosagem: m.dosagem || "",
+      freq: m.freq, intervaloHoras: m.intervaloHoras,
+      primeiraHora: m.primeiraHora, duracaoDias: m.duracaoDias || null,
+      tratamentoInicio: m.tratamentoInicio || null, ativo: m.ativo !== false
+    })),
+    today: { dk: dk, rows: rows }
+  };
+  fetch(PUSH.workerUrl + "/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    keepalive: true
+  }).catch(() => {});
 }
 
 /* ---------- instalação como aplicativo (PWA) ---------- */
@@ -1485,11 +1588,12 @@ function openGuiaInstalacao() {
 renderAll();
 tick();
 setInterval(tick, 15000);
+try { if (PUSH.appId && state.patient) pushInit(); } catch (e) {}
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
   window.addEventListener("load", () => {
     try { navigator.serviceWorker.register("sw.js").catch(() => {}); } catch (e) {}
   });
 }
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a350305b3f37c075',t:'MTc4ODM5MDYzNA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a35223b7ef7faf56',t:'MTc4ODQxMTA4OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
