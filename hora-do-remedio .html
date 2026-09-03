@@ -1,0 +1,1495 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0b6e5f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Hora do Remédio">
+<title>💊 Hora do Remédio</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💊</text></svg>">
+<style>
+  :root{
+    --primary:#0b6e5f; --primary-dark:#085449; --bg:#eef4f2; --card:#ffffff;
+    --text:#17302c; --muted:#5d726d; --line:#dde8e5;
+    --ok:#1e8449; --ok-bg:#e7f6ec; --danger:#b3261e; --danger-bg:#fdecea;
+    --warn:#9a6700; --warn-bg:#fff6dd; --purple:#6a3ea1; --purple-bg:#f1eafb;
+    --blue:#1f4e79; --blue-bg:#e8f0f8;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    background:var(--bg); color:var(--text);
+    font-size:18px; line-height:1.45;
+  }
+  h1,h2,h3{margin:0 0 .35rem}
+  p{margin:.3rem 0}
+  .wrap{max-width:880px;margin:0 auto;padding:14px 14px 110px}
+  @media(min-width:820px){.wrap{padding-bottom:48px}}
+
+  /* ---------- topo ---------- */
+  .topbar{
+    background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);
+    color:#fff; padding:14px 16px 16px;
+  }
+  .topbar .inner{max-width:880px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .brand{font-size:22px;font-weight:800;display:flex;align-items:center;gap:8px}
+  .brand small{display:block;font-size:12.5px;font-weight:500;opacity:.85}
+  .chip{
+    background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.35);
+    border-radius:999px;padding:7px 14px;font-size:15px;font-weight:600;
+    display:inline-flex;align-items:center;gap:7px;white-space:nowrap;
+  }
+  .dot{width:10px;height:10px;border-radius:50%;background:#9ef0b5;box-shadow:0 0 6px #9ef0b5;display:inline-block}
+  .dot.off{background:#cfd8d5;box-shadow:none}
+
+  /* ---------- navegação ---------- */
+  .nav{
+    position:fixed;bottom:0;left:0;right:0;z-index:50;
+    background:#fff;border-top:1.5px solid var(--line);
+    display:flex;justify-content:space-around;
+    padding:6px 4px calc(8px + env(safe-area-inset-bottom));
+  }
+  .nav button{
+    background:none;border:none;cursor:pointer;color:var(--muted);
+    display:flex;flex-direction:column;align-items:center;gap:2px;
+    font-size:12.5px;font-weight:600;padding:6px 8px;min-width:62px;border-radius:12px;
+  }
+  .nav button .ico{font-size:24px;line-height:1}
+  .nav button.on{color:var(--primary);background:var(--bg);font-weight:800}
+  @media(min-width:820px){
+    .nav{top:0;bottom:auto;border-top:none;border-bottom:1.5px solid var(--line);justify-content:center;gap:10px}
+    .nav button{flex-direction:row;gap:8px;font-size:16px;min-width:0;padding:10px 18px}
+    .nav button .ico{font-size:20px}
+  }
+
+  /* ---------- alertas ---------- */
+  .alert-stack{
+    position:fixed;left:50%;transform:translateX(-50%);
+    bottom:calc(78px + env(safe-area-inset-bottom));z-index:90;
+    width:min(560px,calc(100vw - 20px));display:flex;flex-direction:column;gap:10px;
+  }
+  @media(min-width:820px){.alert-stack{bottom:22px}}
+  .alert-card{
+    background:#fff;border:2.5px solid var(--danger);border-radius:16px;
+    padding:14px 16px;box-shadow:0 10px 30px rgba(0,0,0,.22);
+    animation:pop .35s ease;
+  }
+  @keyframes pop{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
+  .alert-card.pulse{border-color:var(--danger);animation:pop .35s ease, pulse 1.6s ease-in-out 2}
+  @keyframes pulse{0%,100%{box-shadow:0 10px 30px rgba(0,0,0,.22)}50%{box-shadow:0 0 0 8px rgba(179,38,30,.18)}}
+  .alert-title{font-size:20px;font-weight:800;display:flex;align-items:center;gap:8px}
+  .alert-sub{font-size:15.5px;color:var(--muted);margin:2px 0 10px}
+  .alert-sub.over{color:var(--danger);font-weight:700}
+  .alert-btns{display:flex;gap:8px;flex-wrap:wrap}
+
+  /* ---------- cards e listas ---------- */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px}
+  .card h2{font-size:21px}
+  .muted{color:var(--muted)}
+  .small{font-size:15px}
+  .row-flex{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+
+  .vazio{text-align:center;padding:34px 18px;color:var(--muted)}
+  .vazio .big{font-size:52px}
+  .vazio h3{color:var(--text);font-size:22px}
+
+  .dose-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px dashed var(--line)}
+  .dose-row:last-child{border-bottom:none}
+  .hora-big{font-size:26px;font-weight:800;color:var(--primary);min-width:66px}
+  .hora-big.over{color:var(--danger)}
+  .dose-info{flex:1;min-width:0}
+  .dose-name{font-weight:700;font-size:17.5px;word-break:break-word}
+  .dose-sub{font-size:14.5px;color:var(--muted)}
+  .dose-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+
+  .cat{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:700;vertical-align:middle}
+  .cat.comum{background:var(--primary);color:#fff}
+  .cat.antibiotico{background:var(--danger);color:#fff}
+  .cat.controlado{background:var(--purple);color:#fff}
+  .bagde-t{background:var(--ok-bg);color:var(--ok);font-weight:800}
+  .bagde-x{background:var(--danger-bg);color:var(--danger);font-weight:800}
+  .bagde-p{background:var(--warn-bg);color:var(--warn);font-weight:700}
+  .badge{border-radius:999px;padding:4px 10px;font-size:13.5px;display:inline-flex;gap:5px;align-items:center}
+
+  .aviso{background:var(--warn-bg);border:1.5px solid #ecd9a0;border-radius:14px;padding:11px 14px;font-size:15.5px;margin:10px 0}
+  .aviso.red{background:var(--danger-bg);border-color:#f0b9b4}
+  .aviso.blue{background:var(--blue-bg);border-color:#b9d1e8}
+  .aviso.purple{background:var(--purple-bg);border-color:#d3bcec}
+
+  /* ---------- botões ---------- */
+  .btn{
+    border:none;border-radius:13px;cursor:pointer;font-weight:800;font-size:17px;
+    padding:13px 18px;min-height:52px;display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    font-family:inherit;
+  }
+  .btn:active{transform:scale(.97)}
+  .btn.pri{background:var(--primary);color:#fff}
+  .btn.pri:hover{background:var(--primary-dark)}
+  .btn.ok{background:var(--ok);color:#fff}
+  .btn.warn{background:var(--warn-bg);color:var(--warn)}
+  .btn.danger{background:var(--danger);color:#fff}
+  .btn.ghost{background:#e9f0ee;color:var(--text)}
+  .btn.purple{background:var(--purple);color:#fff}
+  .btn.small{padding:9px 12px;min-height:40px;font-size:15px;border-radius:10px}
+  .btn.tiny{padding:6px 9px;min-height:34px;font-size:13.5px;border-radius:9px}
+  .btn.block{width:100%}
+
+  .toggle{position:relative;width:64px;height:34px;flex:none;cursor:pointer}
+  .toggle input{opacity:0;width:0;height:0;position:absolute}
+  .toggle .sl{position:absolute;inset:0;background:#c7d3d0;border-radius:999px;transition:.25s}
+  .toggle .sl:before{content:"";position:absolute;width:26px;height:26px;left:4px;top:4px;background:#fff;border-radius:50%;transition:.25s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+  .toggle input:checked + .sl{background:var(--primary)}
+  .toggle input:checked + .sl:before{transform:translateX(30px)}
+
+  /* ---------- tabela agenda ---------- */
+  table.agenda{width:100%;border-collapse:collapse;background:var(--card);border-radius:14px;overflow:hidden;border:1px solid var(--line)}
+  table.agenda th{background:var(--primary);color:#fff;text-align:left;padding:10px 12px;font-size:15.5px}
+  table.agenda td{padding:11px 12px;border-top:1px solid var(--line);font-size:16px;vertical-align:top}
+  table.agenda tr.ino td{color:var(--muted);font-style:italic}
+  .times{display:flex;flex-wrap:wrap;gap:6px}
+  .time-pill{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:4px 9px;font-weight:700;font-size:15px}
+
+  /* ---------- histórico ---------- */
+  .barra{height:14px;background:#e2ebe8;border-radius:999px;overflow:hidden}
+  .barra>div{height:100%;background:var(--ok);border-radius:999px}
+  .dia-head{display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:17px;padding:10px 0 4px}
+
+  /* ---------- modal ---------- */
+  .modal-wrap{position:fixed;inset:0;z-index:120;background:rgba(10,30,26,.55);display:flex;align-items:flex-end;justify-content:center;padding:0}
+  @media(min-width:820px){.modal-wrap{align-items:center;padding:20px}}
+  .modal{
+    background:#fff;width:100%;max-width:620px;max-height:92vh;overflow:auto;
+    border-radius:22px 22px 0 0;padding:20px 18px calc(26px + env(safe-area-inset-bottom));
+  }
+  @media(min-width:820px){.modal{border-radius:22px;padding:24px}}
+  .modal h2{font-size:23px;display:flex;justify-content:space-between;align-items:center}
+  .modal .x{background:#eef2f1;border:none;border-radius:50%;width:38px;height:38px;font-size:18px;cursor:pointer;font-weight:800;color:var(--muted)}
+
+  label{display:block;font-weight:700;font-size:16.5px;margin:14px 0 6px}
+  input[type=text],input[type=number],input[type=time],select,textarea{
+    width:100%;padding:13px 13px;font-size:17.5px;border:1.5px solid #c9d8d4;border-radius:12px;
+    background:#fbfdfc;font-family:inherit;color:var(--text);
+  }
+  input:focus,select:focus,textarea:focus{outline:2.5px solid var(--primary);border-color:var(--primary)}
+  textarea{min-height:74px;resize:vertical}
+  .hint{font-size:14.5px;color:var(--muted);margin-top:5px}
+  .hint b{color:var(--primary)}
+
+  .radio-card{display:flex;gap:10px;align-items:flex-start;border:1.5px solid var(--line);border-radius:13px;padding:12px;margin-top:8px;cursor:pointer;background:#fbfdfc}
+  .radio-card.sel{border-color:var(--primary);background:#f0f9f7}
+  .radio-card input{margin-top:5px;width:20px;height:20px;accent-color:var(--primary);flex:none}
+  .radio-card .t{font-weight:800}
+  .radio-card .d{font-size:14.5px;color:var(--muted)}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:520px){.grid2{grid-template-columns:1fr}}
+
+  .seg{display:flex;background:#e9f0ee;border-radius:13px;padding:4px;gap:4px}
+  .seg button{flex:1;border:none;background:none;padding:11px 6px;font-size:15.5px;font-weight:700;border-radius:10px;cursor:pointer;color:var(--muted)}
+  .seg button.on{background:#fff;color:var(--primary);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+
+  .toast{
+    position:fixed;left:50%;transform:translateX(-50%);bottom:calc(92px + env(safe-area-inset-bottom));
+    background:#17302c;color:#fff;padding:13px 20px;border-radius:14px;font-weight:700;font-size:16px;
+    z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.3);animation:pop .3s ease;max-width:92vw;text-align:center;
+  }
+  @media(min-width:820px){.toast{bottom:26px}}
+
+  .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  @media(max-width:560px){.stat-grid{grid-template-columns:repeat(3,1fr);gap:8px}}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 8px;text-align:center}
+  .stat .n{font-size:26px;font-weight:800;color:var(--primary)}
+  .stat .l{font-size:13px;color:var(--muted);font-weight:600}
+
+  .chev{text-align:center;color:#0b6e5f;font-size:30px;animation:bounce 1.2s infinite}
+  @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(7px)}}
+
+  @media print{
+    body *{visibility:hidden}
+    #printArea,#printArea *{visibility:visible}
+    #printArea{position:absolute;top:0;left:0;width:100%;padding:20px}
+    .no-print{display:none!important}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar no-print">
+  <div class="inner">
+    <div class="brand">💊 Hora do Remédio
+      <small style="display:block">Seu assistente de medicamentos</small>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+      <span class="chip" id="chipPaciente" style="display:none">👤</span>
+      <span class="chip" id="chipControle"><span class="dot" id="dotControle"></span><span id="txtControle">Controle</span></span>
+    </div>
+  </div>
+</header>
+
+<div id="alertStack" class="alert-stack no-print"></div>
+
+<main id="main" class="wrap"></main>
+
+<nav id="nav" class="nav no-print">
+  <button data-action="nav" data-tab="inicio"><span class="ico">🏠</span>Início</button>
+  <button data-action="nav" data-tab="meds"><span class="ico">💊</span>Remédios</button>
+  <button data-action="nav" data-tab="agenda"><span class="ico">📋</span>Agenda</button>
+  <button data-action="nav" data-tab="historico"><span class="ico">📈</span>Histórico</button>
+  <button data-action="nav" data-tab="ajustes"><span class="ico">⚙️</span>Ajustes</button>
+</nav>
+
+<div id="modalWrap" class="modal-wrap" style="display:none"></div>
+<div id="printArea" style="display:none"></div>
+
+<script>
+"use strict";
+/* =========================================================
+   Hora do Remédio — app de controle de horários de medicamentos
+   - Controle ligado: alertas + confirmação de tomada + histórico
+   - Controle desligado: agenda simples (receita)
+   ========================================================= */
+
+/* ---------- armazenamento (com reserva p/ pré-visualização) ---------- */
+const STORE_KEY = "hora-do-remedio-v1";
+const memoryStore = {};
+const store = (() => {
+  try {
+    const t = "__tst__";
+    localStorage.setItem(t, "1");
+    localStorage.removeItem(t);
+    return localStorage;
+  } catch (e) {
+    return {
+      getItem: k => (k in memoryStore ? memoryStore[k] : null),
+      setItem: (k, v) => { memoryStore[k] = String(v); },
+      removeItem: k => { delete memoryStore[k]; }
+    };
+  }
+})();
+
+const DEFAULTS = {
+  config: { controlOn: true, som: true, repetirMin: 10 },
+  patient: null,
+  meds: [],
+  doses: {}   // doses[medId][dateKey][hora] = {st:'t'|'x', ts, adiar(min)}
+};
+
+function loadState() {
+  try {
+    const raw = store.getItem(STORE_KEY);
+    if (!raw) return JSON.parse(JSON.stringify(DEFAULTS));
+    const s = JSON.parse(raw);
+    return {
+      config: Object.assign({}, DEFAULTS.config, s.config || {}),
+      patient: s.patient || null,
+      meds: Array.isArray(s.meds) ? s.meds : [],
+      doses: s.doses || {}
+    };
+  } catch (e) {
+    return JSON.parse(JSON.stringify(DEFAULTS));
+  }
+}
+function saveState() {
+  try { store.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+let state = loadState();
+let ui = { tab: "inicio", alertActive: {}, alertHidden: {}, modalsOpen: 0, editingMedId: null, confirmCb: null };
+
+/* ---------- utilidades ---------- */
+const $ = s => document.querySelector(s);
+const pad = n => String(n).padStart(2, "0");
+const fmtMin = m => pad(Math.floor(((m % 1440) + 1440) % 1440 / 60)) + ":" + pad(((m % 1440) + 1440) % 1440 % 60);
+const fmtHoraTs = ts => { const d = new Date(ts); return pad(d.getHours()) + ":" + pad(d.getMinutes()); };
+function dateKey(d) { d = d || new Date(); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+function nowMin() { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); }
+function hoje() { return dateKey(new Date()); }
+function fmtData(key) {
+  const [y, m, d] = key.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  const dias = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+  return dias[dt.getDay()] + ", " + pad(d) + "/" + pad(m) + "/" + String(y).slice(-2);
+}
+function fmtDataCurto(key) {
+  if (!key) return "";
+  const [y, m, d] = key.split("-").map(Number);
+  return pad(d) + "/" + pad(m) + "/" + String(y).slice(-2);
+}
+function fmtDuracao(min) {
+  if (min < 0) return "atrasada há " + (min === -1 ? "pouco" : Math.abs(min) + " min");
+  const h = Math.floor(min / 60), m = min % 60;
+  if (h === 0) return "em " + m + " min";
+  return "em " + h + "h" + (m ? pad(m) : "");
+}
+function saudacao() {
+  const h = new Date().getHours();
+  return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
+}
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function uid() { return "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+/* ---------- agendamento ---------- */
+function scheduleOf(med) {
+  const start = med.primeiraHora != null ? med.primeiraHora : 8 * 60;
+  const step = med.freq === "horas" ? (med.intervaloHoras || 8) * 60 : Math.round(1440 / Number(med.freq || 1));
+  const n = med.freq === "horas" ? Math.max(1, Math.ceil(1440 / step)) : Number(med.freq || 1);
+  const times = [];
+  let t = start;
+  for (let i = 0; i < n; i++) { times.push(((t % 1440) + 1440) % 1440); t += step; }
+  return [...new Set(times)].sort((a, b) => a - b);
+}
+function descFreq(med) {
+  if (med.freq === "horas") return "a cada " + (med.intervaloHoras || 8) + "h";
+  return med.freq + "x ao dia";
+}
+function descCategoria(cat) {
+  return { comum: "Uso comum", antibiotico: "Antibiótico", controlado: "Uso controlado" }[cat] || "Uso comum";
+}
+function catIcon(cat) {
+  return { comum: "💊", antibiotico: "🦠", controlado: "🔒" }[cat] || "💊";
+}
+
+/* ---------- doses ---------- */
+function rowsOf(med, dk) {
+  const byMed = state.doses[med.id] || {};
+  return byMed[dk] || {};
+}
+function rowOf(med, dk, hora) {
+  const byMed = state.doses[med.id] || {};
+  return (byMed[dk] || {})[hora] || null;
+}
+function setRow(med, dk, hora, row) {
+  if (!state.doses[med.id]) state.doses[med.id] = {};
+  if (!state.doses[med.id][dk]) state.doses[med.id][dk] = {};
+  if (row) state.doses[med.id][dk][hora] = row; else delete state.doses[med.id][dk][hora];
+  saveState();
+}
+function effMin(med, dk, hora) {
+  const r = rowOf(med, dk, hora);
+  return (Number(hora) + (r && r.adiar ? r.adiar : 0)) % 1440;
+}
+
+/* ---------- toasts / sons / notificações ---------- */
+let toastTimer = null;
+function toast(msg) {
+  const old = $(".toast"); if (old) old.remove();
+  const el = document.createElement("div");
+  el.className = "toast"; el.textContent = msg;
+  document.body.appendChild(el);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.remove(), 2600);
+}
+let audioCtx = null;
+function ensureAudio() {
+  try {
+    if (!audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
+    }
+    if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+  } catch (e) {}
+}
+document.addEventListener("click", ensureAudio, { once: true });
+function playBeep() {
+  if (!state.config.som) return;
+  try {
+    ensureAudio();
+    if (!audioCtx) return;
+    const seq = [[880, 0, .18], [660, .22, .18], [880, .44, .28]];
+    seq.forEach(([f, off, dur]) => {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = "sine"; o.frequency.value = f;
+      g.gain.setValueAtTime(.0001, audioCtx.currentTime + off);
+      g.gain.exponentialRampToValueAtTime(.4, audioCtx.currentTime + off + .02);
+      g.gain.exponentialRampToValueAtTime(.0001, audioCtx.currentTime + off + dur);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(audioCtx.currentTime + off); o.stop(audioCtx.currentTime + off + dur + .05);
+    });
+  } catch (e) {}
+}
+function notify(title, body) {
+  try {
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification(title, { body: body, icon: undefined });
+    }
+  } catch (e) {}
+}
+function pedirPermissaoNotif() {
+  try {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission().then(() => {
+        if (Notification.permission === "granted") toast("🔔 Notificações ativadas (some quando o app estiver aberto)");
+      }).catch(() => {});
+    }
+  } catch (e) {}
+}
+
+/* ---------- render: cabeçalho ---------- */
+function renderHeader() {
+  const p = state.patient;
+  const chipP = $("#chipPaciente");
+  if (p) {
+    chipP.style.display = "inline-flex";
+    chipP.textContent = "👤 " + p.nome + (p.idade ? " • " + p.idade + " anos" : "");
+    chipP.style.cursor = "pointer";
+    chipP.onclick = () => setTab("ajustes");
+  } else chipP.style.display = "none";
+  $("#dotControle").className = "dot" + (state.config.controlOn ? "" : " off");
+  $("#txtControle").textContent = state.config.controlOn ? "Controle: LIGADO" : "Modo Agenda";
+}
+
+/* ---------- render: abas ---------- */
+function setTab(t) {
+  ui.tab = t;
+  renderAll();
+  window.scrollTo({ top: 0 });
+}
+function renderAll() {
+  applyAutoPause();
+  renderHeader();
+  document.querySelectorAll(".nav button").forEach(b => b.classList.toggle("on", b.dataset.tab === ui.tab));
+  const m = $("#main");
+  if (!state.patient) { m.innerHTML = renderOnboarding(); return; }
+  if (ui.tab === "inicio") m.innerHTML = renderHome();
+  else if (ui.tab === "meds") m.innerHTML = renderMeds();
+  else if (ui.tab === "agenda") m.innerHTML = renderAgenda();
+  else if (ui.tab === "historico") m.innerHTML = renderHistorico();
+  else m.innerHTML = renderAjustes();
+  wireHomeCountdown();
+}
+
+/* ---------- onboarding ---------- */
+function renderOnboarding() {
+  return `
+  <div class="card" style="text-align:center;padding:36px 22px;margin-top:6px">
+    <div style="font-size:64px">💊</div>
+    <h1 style="font-size:27px;margin-top:10px">Bem-vindo(a)!</h1>
+    <p class="muted" style="font-size:17px">Vamos montar seu controle de medicamentos em menos de 1 minuto.<br>Primeiro, quem vai usar o app?</p>
+    <div class="chev">▾</div>
+    <button class="btn pri block" style="max-width:340px;margin:0 auto" data-action="onboarding">👤 Cadastrar perfil</button>
+  </div>`;
+}
+
+function openOnboarding(isEdit) {
+  const p = state.patient || {};
+  openModal(`
+    <h2>${isEdit ? "Editar perfil" : "Quem vai usar o app?"} <button class="x" data-action="close-modal">✕</button></h2>
+    <label>Nome *</label>
+    <input type="text" id="p-nome" placeholder="Ex.: João da Silva" value="${esc(p.nome || "")}" maxlength="60">
+    <div class="grid2">
+      <div>
+        <label>Idade</label>
+        <input type="number" id="p-idade" placeholder="Ex.: 62" min="1" max="120" value="${p.idade || ""}">
+      </div>
+      <div>
+        <label>Sexo</label>
+        <select id="p-sexo">
+          <option value="">—</option>
+          <option value="M"${p.sexo === "M" ? " selected" : ""}>Masculino</option>
+          <option value="F"${p.sexo === "F" ? " selected" : ""}>Feminino</option>
+          <option value="O"${p.sexo === "O" ? " selected" : ""}>Outro / prefiro não dizer</option>
+        </select>
+      </div>
+    </div>
+    <label>Observações (alergias, médico, convênio...)</label>
+    <textarea id="p-obs" placeholder="Opcional">${esc(p.obs || "")}</textarea>
+    ${isEdit ? "" : `
+    <label style="margin-top:18px">Como você quer usar o app?</label>
+    <label class="radio-card sel" id="rc1" style="margin-top:4px">
+      <input type="radio" name="modo" value="on" checked>
+      <span><span class="t">🔔 Controle completo (recomendado)</span><br><span class="d">O app avisa a hora de tomar, você confirma se tomou ou não e acompanha o histórico.</span></span>
+    </label>
+    <label class="radio-card" id="rc2">
+      <input type="radio" name="modo" value="off">
+      <span><span class="t">📋 Só agenda (receita)</span><br><span class="d">Sem confirmações nem alertas: apenas a lista dos remédios com seus horários.</span></span>
+    </label>
+    <p class="hint">Você pode mudar essa opção quando quiser, em <b>Ajustes</b>.</p>`}
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn pri block" data-action="save-perfil" data-edit="${isEdit ? 1 : 0}">${isEdit ? "Salvar" : "Começar 💪"}</button>
+    </div>
+  `);
+  ["rc1", "rc2"].forEach(id => {
+    const el = $("#" + id);
+    if (el) el.addEventListener("click", () => {
+      el.querySelector("input").checked = true;
+      $("#rc1").classList.toggle("sel", $("#rc1 input").checked);
+      $("#rc2").classList.toggle("sel", $("#rc2 input").checked);
+    });
+  });
+}
+
+function savePerfil(isEdit) {
+  const nome = ($("#p-nome").value || "").trim();
+  if (!nome) { toast("⚠️ Informe o nome do paciente"); $("#p-nome").focus(); return; }
+  state.patient = {
+    nome: nome,
+    idade: parseInt($("#p-idade").value) || null,
+    sexo: $("#p-sexo").value || null,
+    obs: ($("#p-obs").value || "").trim()
+  };
+  if (!isEdit) {
+    const modo = document.querySelector('input[name="modo"]:checked');
+    if (modo) state.config.controlOn = modo.value === "on";
+    pedirPermissaoNotif();
+  }
+  saveState(); closeModal(); renderAll();
+  toast("✔ Perfil salvo" + (isEdit ? "" : " — bem-vindo(a), " + state.patient.nome + "!"));
+  if (!isEdit && state.meds.length === 0) {
+    setTimeout(() => openMedForm(null), 450);
+  }
+}
+
+/* ---------- aba Início ---------- */
+function medsAtivos() { return state.meds.filter(m => m.ativo !== false); }
+
+function renderHome() {
+  const p = state.patient;
+  const dk = hoje();
+  const ativos = medsAtivos().filter(m => doseDayActive(m, dk));
+  const noControl = !state.config.controlOn;
+
+  let next = null; // {med, eff, hora, diff, status}
+  const todosDia = [];
+  ativos.forEach(med => {
+    scheduleOf(med).forEach(h => {
+      const r = rowOf(med, dk, h) || {};
+      todosDia.push({ med: med, hora: h, eff: effMin(med, dk, h), st: r.st || "p", ts: r.ts });
+    });
+  });
+  todosDia.sort((a, b) => a.eff - b.eff);
+  const rows = todosDia.filter(r => r.st !== "t");
+  const nowN = nowMin();
+  if (rows.length) {
+    const pend = rows.filter(r => r.st === "p");
+    if (pend.length) {
+      const urg = pend.slice().sort((a, b) => (a.eff - nowN) - (b.eff - nowN))[0];
+      next = urg;
+    } else {
+      const futuros = ativos.map(m => {
+        const h = scheduleOf(m)[0];
+        return { med: m, eff: h, hora: h, st: "p", ts: null };
+      }).filter(x => x).sort((a, b) => a.eff - b.eff);
+      next = futuros[0] || null;
+      if (next) next.amanha = true;
+    }
+  } else if (ativos.length) {
+    const futuros = ativos.map(m => ({
+      med: m, eff: scheduleOf(m)[0], hora: scheduleOf(m)[0], st: "p", ts: null
+    })).sort((a, b) => a.eff - b.eff);
+    next = futuros[0] || null;
+    if (next) next.amanha = true;
+  }
+
+  let html = "";
+  if (noControl) {
+    html += `<div class="aviso blue">📋 <b>Modo Agenda ativo:</b> o controle de confirmações está desligado. Aqui você vê apenas os horários de hoje, como uma receita. Para ligar os alertas e confirmações, vá em <b>Ajustes</b>.</div>`;
+  }
+
+  /* próximo */
+  if (next) {
+    const diff = next.eff - nowN;
+    const over = next.st === "p" && !next.amanha && diff < 0;
+    const em = next.amanha ? "amanhã às " + fmtMin(next.eff) :
+      over ? ("<span style='color:var(--danger)'>⚠️ atrasada há " + Math.abs(diff) + " min</span>") :
+      "em " + fmtDuracao(diff);
+    html += `
+    <div class="card" style="border:2px solid var(--primary);background:linear-gradient(180deg,#f4fbf9,#fff)">
+      <div class="small muted" style="font-weight:800;text-transform:uppercase;letter-spacing:.4px">Próxima dose</div>
+      <div style="font-size:23px;font-weight:800;margin:4px 0 2px">${catIcon(next.med.categoria)} ${esc(next.med.nome)}${next.med.dosagem ? " <span class='muted' style='font-weight:500;font-size:17px'>(" + esc(next.med.dosagem) + ")</span>" : ""}</div>
+      <div style="font-size:19px;font-weight:700;color:var(--primary)">${fmtMin(next.eff)} <span class="muted" style="font-weight:600" id="nextInfo">• ${next.amanha ? "amanhã" : em}</span></div>
+      <div class="small muted">${descFreq(next.med)} • ${descCategoria(next.med.categoria)}</div>
+    </div>`;
+  } else if (!noControl && ativos.length === 0) {
+    html += `<div class="card vazio"><div class="big">💊</div><h3>Nenhum medicamento cadastrado</h3><p>Adicione seu primeiro remédio para começar.</p>
+      <button class="btn pri" data-action="add-med">+ Adicionar medicamento</button></div>`;
+  } else if (!noControl && ativos.length) {
+    html += `<div class="card vazio"><div class="big">🎉</div><h3>Tudo em dia por hoje!</h3><p>Todas as doses de hoje foram registradas.</p></div>`;
+  }
+
+  /* lista do dia */
+  html += `<div class="card" style="margin-top:0">
+    <div class="row-flex"><h2>📅 Hoje, ${fmtData(dk)}</h2>
+    ${noControl ? "" : `<button class="btn ghost small" data-action="add-med">+ Remédio</button>`}
+    </div>`;
+
+  if (ativos.length === 0) {
+    html += `<div class="vazio"><p>Nenhum remédio cadastrado ainda.</p></div>`;
+  } else {
+    const todos = ativos.flatMap(m => scheduleOf(m).map(h => ({ med: m, hora: h, eff: effMin(m, dk, h), st: (rowOf(m, dk, h) || {}).st || "p", ts: (rowOf(m, dk, h) || {}).ts })))
+      .sort((a, b) => a.eff - b.eff);
+    html += `<div style="margin-top:6px">`;
+    if (!todos.length) html += `<div class="vazio"><p>Sem doses hoje.</p></div>`;
+    todos.forEach(d => {
+      const over = d.st === "p" && d.eff < nowN;
+      html += `<div class="dose-row">
+        <div class="hora-big${over ? " over" : ""}">${fmtMin(d.eff)}</div>
+        <div class="dose-info">
+          <div class="dose-name">${catIcon(d.med.categoria)} ${esc(d.med.nome)}</div>
+          <div class="dose-sub">${d.st === "t" ? "✔ Tomado às " + fmtHoraTs(d.ts) : d.st === "x" ? "✖ Marcado como não tomado" : over ? "Atrasada há " + (nowN - d.eff) + " min" : (d.eff > nowN ? "Daqui a " + (d.eff - nowN) + " min" : "Hora de tomar")}</div>
+        </div>
+        <div class="dose-actions">
+          ${noControl ? "" : d.st === "t" ? `<span class="badge bagde-t">✔ Tomado</span>` :
+            d.st === "x" ? `<span class="badge bagde-x">✖ Não tomado</span>` :
+            `<button class="btn ok small" data-action="mark" data-med="${d.med.id}" data-hora="${d.hora}" data-val="t" data-date="${dk}">✓ Tomei</button>
+             ${over ? "" : `<button class="btn ghost tiny" data-action="snooze" data-med="${d.med.id}" data-hora="${d.hora}" data-date="${dk}" title="Adiar 10 min">+10</button>`}
+             <button class="btn ghost tiny" data-action="mark" data-med="${d.med.id}" data-hora="${d.hora}" data-val="x" data-date="${dk}" title="Não vou tomar">✖</button>`}
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+  html += `</div>`;
+
+  if (!noControl && ativos.length) {
+    const hojeFeito = todosDia.filter(r => r.st === "t").length;
+    const hojeTotal = todosDia.length;
+    const pct = hojeTotal ? Math.round(hojeFeito / hojeTotal * 100) : 0;
+    html += `<div class="card">
+      <div class="row-flex"><h2>📊 Hoje</h2><b style="font-size:19px;color:var(--primary)">${hojeFeito}/${hojeTotal} doses</b></div>
+      <div class="barra" style="margin-top:6px"><div style="width:${pct}%"></div></div>
+      <div class="small muted" style="margin-top:6px">Conclusão de hoje: <b>${pct}%</b></div>
+    </div>`;
+  }
+  return html;
+}
+
+function wireHomeCountdown() {
+  /* atualiza títulos da lista que dependem de minutos */
+}
+
+/* ---------- aba Remédios ---------- */
+function renderMeds() {
+  const noControl = !state.config.controlOn;
+  let html = `<div class="row-flex" style="margin-bottom:14px">
+    <h1 style="font-size:24px">💊 Meus medicamentos</h1>
+    <button class="btn pri small" data-action="add-med">+ Adicionar</button>
+  </div>`;
+  if (noControl) html += `<div class="aviso blue">📋 <b>Modo Agenda:</b> sem confirmações — os medicamentos aparecem apenas com seus horários. <button class="btn ghost tiny" data-action="goto-ajustes">Ligar controle</button></div>`;
+
+  if (!state.meds.length) {
+    html += `<div class="card vazio"><div class="big">💊</div><h3>Lista vazia</h3><p>Cadastre seus medicamentos com nome, frequência e horários.</p>
+      <button class="btn pri" data-action="add-med">+ Adicionar medicamento</button></div>`;
+    return html;
+  }
+  state.meds.forEach(med => {
+    const hrs = scheduleOf(med);
+    const dk = hoje();
+    const feitos = hrs.filter(h => (rowOf(med, dk, h) || {}).st === "t").length;
+    const st = tratamentoStatus(med);
+    const avisoCat = med.categoria === "antibiotico"
+      ? `<div class="aviso red" style="margin:8px 0 0">⚠️ <b>Antibiótico:</b> complete todo o tratamento, mesmo se melhorar. Não pule doses.${med.duracaoDias ? "<br>" + antibInfo(med) : ""}</div>`
+      : med.categoria === "controlado"
+      ? `<div class="aviso purple" style="margin:8px 0 0">🔒 <b>Uso controlado:</b> não interrompa nem altere a dose sem orientação médica.</div>` : "";
+    let prazoTxt = "";
+    if (med.duracaoDias && med.tratamentoInicio) {
+      prazoTxt = ` • <b>${descPrazo(med)}</b><br>
+        <span class="small muted">Início: ${fmtDataCurto(med.tratamentoInicio)} • Término: ${fmtDataCurto(fimDe(med))} • ${scheduleOf(med).length}x/dia × ${med.duracaoDias} dias = ${totalDoses(med)} doses</span>`;
+    }
+    const concluido = st === "concluido";
+    html += `<div class="card" style="${med.ativo === false && !concluido ? "opacity:.62" : ""}">
+      <div class="row-flex">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <h2 style="margin:0">${catIcon(med.categoria)} ${esc(med.nome)}</h2>
+          <span class="cat ${esc(med.categoria)}">${catIcon(med.categoria)} ${descCategoria(med.categoria)}</span>
+          ${concluido ? `<span class="badge bagde-x">🎉 Concluído</span>` : ""}
+        </div>
+        <div style="display:flex;gap:6px">
+          ${concluido ? `<button class="btn ok tiny" data-action="restart-med" data-med="${med.id}">▶ Novo tratamento</button>` : ""}
+          <button class="btn ghost tiny" data-action="edit-med" data-med="${med.id}">✏️ Editar</button>
+          <button class="btn ghost tiny" data-action="del-med" data-med="${med.id}">🗑</button>
+        </div>
+      </div>
+      <p style="margin-top:6px">
+        <b>${descFreq(med)}</b>${med.dosagem ? " • " + esc(med.dosagem) : ""}
+        ${med.ativo === false && !concluido ? " • <b style='color:var(--muted)'>⏸ PAUSADO</b>" : ""}
+        <br>${prazoTxt || "<span class='small muted'>Sem prazo — uso contínuo</span>"}
+      </p>
+      <div class="times">${hrs.map(h => `<span class="time-pill">${fmtMin(h)}</span>`).join("")}</div>
+      <p class="hint">${med.instrucoes ? "📝 " + esc(med.instrucoes) : ""}</p>
+      ${avisoCat}
+      ${!noControl && !concluido ? `<div class="row-flex" style="margin-top:10px">
+        <span class="small muted">Hoje: <b>${feitos}/${hrs.length}</b> doses confirmadas</span>
+        <button class="btn ${med.ativo === false ? "ghost" : "warn"} tiny" data-action="toggle-ativo" data-med="${med.id}">${med.ativo === false ? "▶ Reativar" : "⏸ Pausar"}</button>
+      </div>` : ""}
+    </div>`;
+  });
+  return html;
+}
+
+/* ---------- formulário de medicamento ---------- */
+function openMedForm(med) {
+  const m = med || { id: null, nome: "", dosagem: "", freq: "2", intervaloHoras: 8, primeiraHora: 10 * 60, categoria: "comum", duracaoDias: null, duracaoModo: null, instrucoes: "", ativo: true };
+  ui.editingMedId = med ? med.id : null;
+  const modoDias = m.duracaoModo || (m.duracaoDias ? "total" : "cont");
+  const restDias = (med && m.duracaoDias) ? (restantesDias(med) != null ? restantesDias(med) : m.duracaoDias) : "";
+  openModal(`
+    <h2>${med ? "✏️ Editar medicamento" : "➕ Novo medicamento"} <button class="x" data-action="close-modal">✕</button></h2>
+    <label>Nome do medicamento *</label>
+    <input type="text" id="f-nome" placeholder="Ex.: Amoxicilina, Losartana..." value="${esc(m.nome)}" maxlength="60" autocomplete="off">
+    <div class="grid2">
+      <div>
+        <label>Dose (opcional)</label>
+        <input type="text" id="f-dosagem" placeholder="Ex.: 500 mg" value="${esc(m.dosagem)}" maxlength="30">
+      </div>
+      <div>
+        <label>Classificação</label>
+        <select id="f-categoria">
+          <option value="comum"${m.categoria === "comum" ? " selected" : ""}>💊 Uso comum / contínuo</option>
+          <option value="antibiotico"${m.categoria === "antibiotico" ? " selected" : ""}>🦠 Antibiótico</option>
+          <option value="controlado"${m.categoria === "controlado" ? " selected" : ""}>🔒 Uso controlado (tarja preta)</option>
+        </select>
+      </div>
+    </div>
+    <label>Frequência diária</label>
+    <div class="seg" id="segFreq">
+      <button data-f="1" class="${m.freq === "1" ? "on" : ""}">1x/dia</button>
+      <button data-f="2" class="${m.freq === "2" ? "on" : ""}">2x/dia</button>
+      <button data-f="3" class="${m.freq === "3" ? "on" : ""}">3x/dia</button>
+      <button data-f="4" class="${m.freq === "4" ? "on" : ""}">4x/dia</button>
+      <button data-f="horas" class="${m.freq === "horas" ? "on" : ""}">Cada X h</button>
+    </div>
+    <div id="wrapIntervalo" style="${m.freq === "horas" ? "" : "display:none"}">
+      <label>Tomar a cada quantas horas?</label>
+      <select id="f-intervalo">
+        ${[4, 6, 8, 12].map(h => `<option value="${h}"${m.intervaloHoras === h ? " selected" : ""}>${h} em ${h} horas (${Math.round(24 / h)}x ao dia)</option>`).join("")}
+      </select>
+    </div>
+    <label>Hora da <b>1ª dose</b> — você escolhe! ⏰</label>
+    <input type="time" id="f-primeiraHora" value="${fmtMin(m.primeiraHora)}">
+    <div id="preview" style="margin-top:8px"></div>
+    <div id="tipMadrugada" style="display:none" class="aviso">🌙 <b>Uma dose cai de madrugada.</b> Dica: escolha a 1ª dose mais tarde (ex.: 06:00 ou 10:00) para dormir a noite inteira.</div>
+    <div id="wrapTratamento">
+      <label>Tomar por quantos dias? (opcional)</label>
+      <div class="seg" id="segDias">
+        <button data-m="cont" class="${modoDias === "cont" ? "on" : ""}">Contínuo</button>
+        <button data-m="total" class="${modoDias === "total" ? "on" : ""}">Por X dias</button>
+        <button data-m="rest" class="${modoDias === "rest" ? "on" : ""}">Já comecei: faltam X</button>
+      </div>
+      <div id="wrapDiasTotal" style="${modoDias === "total" ? "" : "display:none"}">
+        <input type="number" id="f-duracao" min="1" max="60" placeholder="Ex.: 7" value="${modoDias === "total" ? (m.duracaoDias || "") : ""}">
+        <label style="margin-top:10px">Data de início do tratamento</label>
+        <input type="date" id="f-dataInicio" value="${m.tratamentoInicio || hoje()}">
+        <p class="hint">Ex.: <b>Nimesulida por 5 dias</b> ou antibiótico por <b>7 dias</b> — o app conta a partir da data escolhida (padrão: hoje) e pausa sozinho no fim.</p>
+      </div>
+      <div id="wrapDiasRest" style="${modoDias === "rest" ? "" : "display:none"}">
+        <input type="number" id="f-restantes" min="1" max="60" placeholder="Ex.: 4" value="${modoDias === "rest" ? restDias : ""}">
+        <p class="hint">Ex.: tratamento de 7 dias, já se passaram 3 → faltam <b>4</b>. O app conta os dias que faltam a partir de hoje.</p>
+      </div>
+      <p class="hint" id="hintCont" style="${modoDias === "cont" ? "" : "display:none"}">Deixe em <b>Contínuo</b> para remédios sem data de término (pressão, diabetes, colesterol...).</p>
+    </div>
+    <label>Instruções (opcional)</label>
+    <textarea id="f-instrucoes" placeholder="Ex.: tomar após o almoço; com bastante água...">${esc(m.instrucoes)}</textarea>
+    <div class="aviso" id="avisoCat" style="display:none"></div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn pri block" data-action="save-med">💾 Salvar medicamento</button>
+    </div>
+  `, { onFreq: true });
+
+  const seg = $("#segFreq");
+  seg.addEventListener("click", e => {
+    const b = e.target.closest("button[data-f]"); if (!b) return;
+    seg.querySelectorAll("button").forEach(x => x.classList.remove("on"));
+    b.classList.add("on");
+    $("#wrapIntervalo").style.display = b.dataset.f === "horas" ? "" : "none";
+    updPreview();
+  });
+  const segDias = $("#segDias");
+  if (segDias) segDias.addEventListener("click", e => {
+    const b = e.target.closest("button[data-m]"); if (!b) return;
+    segDias.querySelectorAll("button").forEach(x => x.classList.remove("on"));
+    b.classList.add("on");
+    const modo = b.dataset.m;
+    $("#wrapDiasTotal").style.display = modo === "total" ? "" : "none";
+    $("#wrapDiasRest").style.display = modo === "rest" ? "" : "none";
+    $("#hintCont").style.display = modo === "cont" ? "" : "none";
+  });
+  $("#f-categoria").addEventListener("change", () => {
+    const c = $("#f-categoria").value;
+    const av = $("#avisoCat");
+    if (c === "antibiotico") { av.style.display = ""; av.className = "aviso red"; av.innerHTML = "🦠 <b>Antibiótico:</b> tome nos horários certinhos e <b>complete o tratamento inteiro</b>, mesmo se melhorar. Não pule nenhuma dose."; }
+    else if (c === "controlado") { av.style.display = ""; av.className = "aviso purple"; av.innerHTML = "🔒 <b>Uso controlado:</b> atenção redobrada — não interrompa nem altere doses sem orientação médica."; }
+    else { av.style.display = "none"; }
+  });
+  $("#f-primeiraHora").addEventListener("input", updPreview);
+  updPreview();
+}
+
+function updPreview() {
+  const seg = $("#segFreq");
+  const f = seg ? (seg.querySelector("button.on") || {}).dataset.f : "2";
+  const start = $("#f-primeiraHora").value;
+  if (!start) return;
+  const [h, mn] = start.split(":").map(Number);
+  const startMin = h * 60 + mn;
+  const intervaloHoras = parseInt($("#f-intervalo").value) || 8;
+  const med = { freq: f, intervaloHoras: intervaloHoras, primeiraHora: startMin };
+  const hrs = scheduleOf(med);
+  const stepTxt = f === "horas" ? `de ${intervaloHoras} em ${intervaloHoras} horas` : `intervalos de ${Math.round(24 / Number(f))}h`;
+  $("#preview").innerHTML = `<div class="hint" style="font-size:16px;color:var(--text)">Horários calculados (${stepTxt}):<br><div class="times" style="margin-top:6px">${hrs.map(t => `<span class="time-pill" style="background:var(--ok-bg);border-color:#b6dfc6">${fmtMin(t)}</span>`).join("")}</div></div>`;
+  const madrugada = hrs.some(t => t < 6 * 60);
+  $("#tipMadrugada").style.display = madrugada ? "" : "none";
+}
+
+function saveMed() {
+  const nome = ($("#f-nome").value || "").trim();
+  if (!nome) { toast("⚠️ Informe o nome do medicamento"); $("#f-nome").focus(); return; }
+  const sel = $("#segFreq").querySelector("button.on");
+  const freq = sel ? sel.dataset.f : "2";
+  const v = $("#f-primeiraHora").value;
+  const [h, mn] = (v || "08:00").split(":").map(Number);
+  const categoria = $("#f-categoria").value;
+  let duracaoDias = null, duracaoModo = null, tratamentoInicio = null;
+  const modoD = (($("#segDias").querySelector("button.on") || {}).dataset.m) || "cont";
+  if (modoD === "total") {
+    const val = parseInt($("#f-duracao").value);
+    if (val && val > 0) {
+      duracaoDias = val;
+      duracaoModo = "total";
+      tratamentoInicio = $("#f-dataInicio").value || hoje();
+    }
+  } else if (modoD === "rest") {
+    const val = parseInt($("#f-restantes").value);
+    if (val && val > 0) {
+      duracaoDias = val;
+      duracaoModo = "rest";
+      tratamentoInicio = hoje(); // "faltam X" conta a partir de hoje
+    }
+  }
+  const dados = {
+    nome: nome,
+    dosagem: ($("#f-dosagem").value || "").trim(),
+    freq: freq,
+    intervaloHoras: parseInt($("#f-intervalo").value) || 8,
+    primeiraHora: h * 60 + mn,
+    categoria: categoria,
+    duracaoDias: duracaoDias,
+    duracaoModo: duracaoModo,
+    tratamentoInicio: tratamentoInicio,
+    instrucoes: ($("#f-instrucoes").value || "").trim()
+  };
+  if (ui.editingMedId) {
+    const med = state.meds.find(x => x.id === ui.editingMedId);
+    if (med) Object.assign(med, dados);
+    toast("✔ Medicamento atualizado");
+  } else {
+    state.meds.push(Object.assign({ id: uid(), ativo: true, criadoEm: hoje() }, dados));
+    toast("✔ Medicamento cadastrado");
+  }
+  saveState(); closeModal(); renderAll();
+}
+
+/* ---------- aba Agenda (receita) ---------- */
+function renderAgenda() {
+  let html = `<div class="row-flex" style="margin-bottom:14px">
+    <h1 style="font-size:24px">📋 Agenda / Receita</h1>
+    <button class="btn ghost small" data-action="print">🖨 Imprimir</button></div>`;
+  if (!state.config.controlOn) html += `<div class="aviso blue">📋 <b>Modo Agenda:</b> visão simplificada, como uma receita — sem confirmações nem alertas.</div>`;
+  else html += `<div class="aviso">🔔 <b>Controle ligado:</b> esta é a grade fixa de horários. As confirmações do dia ficam na aba <b>Início</b>.</div>`;
+
+  if (!state.meds.length) {
+    html += `<div class="card vazio"><div class="big">📋</div><h3>Nada para mostrar</h3><p>Cadastre medicamentos para montar sua agenda.</p>
+      <button class="btn pri" data-action="add-med">+ Adicionar medicamento</button></div>`;
+    return html;
+  }
+  html += `<table class="agenda"><tr><th>Medicamento</th><th>Horários</th><th>Frequência</th></tr>`;
+  state.meds.forEach(med => {
+    const hrs = scheduleOf(med);
+    html += `<tr${med.ativo === false ? ' class="ino"' : ""}>
+      <td><b>${catIcon(med.categoria)} ${esc(med.nome)}</b> ${med.ativo === false ? "(pausado)" : ""}<br>
+        <span class="small muted">${esc(med.dosagem || "")} ${med.instrucoes ? "• " + esc(med.instrucoes) : ""}</span><br>
+        <span class="cat ${esc(med.categoria)}">${descCategoria(med.categoria)}</span>
+        ${med.duracaoDias && med.tratamentoInicio ? `<br><span class="small" style="color:var(--primary);font-weight:700">${descPrazo(med)}</span><br><span class="small muted">Início: ${fmtDataCurto(med.tratamentoInicio)} • Fim: ${fmtDataCurto(fimDe(med))}</span>` : ""}</td>
+      <td><div class="times">${hrs.map(t => `<span class="time-pill">${fmtMin(t)}</span>`).join("")}</div></td>
+      <td>${descFreq(med)}</td></tr>`;
+  });
+  html += `</table>`;
+  html += `<p class="hint" style="margin-top:12px">🔎 Os horários são calculados automaticamente a partir da frequência e da hora da 1ª dose escolhida por você. Medicamentos com prazo (ex.: por 5 ou 7 dias) aparecem somente dentro do período do tratamento e são pausados automaticamente ao final.</p>`;
+  return html;
+}
+
+/* ---------- aba Histórico ---------- */
+function renderHistorico() {
+  const noControl = !state.config.controlOn;
+  if (noControl) {
+    return `<div class="card vazio"><div class="big">🔕</div><h3>Controle desligado</h3>
+      <p>O histórico de confirmações só é gravado quando o modo de controle está ligado.</p>
+      <button class="btn pri" data-action="goto-ajustes">Ligar controle</button></div>`;
+  }
+  if (!state.meds.length) {
+    return `<div class="card vazio"><div class="big">📈</div><h3>Sem dados ainda</h3><p>Cadastre medicamentos e confirme as doses para ver o histórico.</p>
+      <button class="btn pri" data-action="add-med">+ Adicionar medicamento</button></div>`;
+  }
+  const dias = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    dias.push(dateKey(d));
+  }
+  let html = `<h1 style="font-size:24px;margin-bottom:12px">📈 Histórico — últimos 7 dias</h1>`;
+
+  /* tratamentos com prazo — visão por curso (como no exemplo) */
+  const comPrazo = state.meds.filter(m => m.duracaoDias && m.tratamentoInicio);
+  if (comPrazo.length) {
+    html += `<div class="card">
+      <h2>🧪 Tratamentos com prazo</h2>`;
+    comPrazo.forEach(med => {
+      const st = tratamentoStatus(med);
+      const dTot = med.duracaoDias;
+      const dia = diaDoTratamento(med);
+      const pct = Math.round((dia ? dia - 1 : dTot) / dTot * 100);
+      html += `<div class="dose-row" style="flex-wrap:wrap">
+        <div class="dose-info" style="min-width:210px">
+          <div class="dose-name" style="font-size:17px">${catIcon(med.categoria)} ${esc(med.nome)} — ${descFreq(med)} por ${dTot} dia${dTot > 1 ? "s" : ""}</div>
+          <div class="dose-sub">Início: ${fmtDataCurto(med.tratamentoInicio)}${st === "concluido" ? " • fim: " + fmtDataCurto(fimDe(med)) : ""} • ${totalDoses(med)} doses no total</div>
+          <div class="barra" style="margin-top:6px"><div style="width:${st === "concluido" ? 100 : pct}%"></div></div>
+        </div>
+        <div style="text-align:right">
+          ${st === "concluido"
+            ? `<span class="badge bagde-x">🎉 Concluído</span>`
+            : st === "futuro"
+            ? `<span class="badge bagde-p">⏳ Começa ${fmtDataCurto(med.tratamentoInicio)}</span>`
+            : `<div style="font-weight:800;font-size:17px">Dia ${dia} de ${dTot}</div>
+               <div class="small${restantesDias(med) === 1 ? " muted" : ""}" style="color:${restantesDias(med) === 1 ? "var(--danger)" : "var(--muted)"}">${restantesDias(med) === 1 ? "⚠️ Último dia!" : "faltam " + restantesDias(med) + " dias"}</div>`}
+        </div>
+      </div>`;
+    });
+    html += `<p class="hint">O histórico registra a partir do dia de início. Dias antes do registro não são inventados.</p>
+    </div>`;
+  }
+
+  // resumo da semana
+  let totT = 0, totX = 0;
+  dias.forEach(dk => {
+    state.meds.forEach(m => {
+      if (!doseDayActive(m, dk)) return;
+      scheduleOf(m).forEach(h => {
+        const r = rowOf(m, dk, h);
+        if (r && r.st === "t") totT++;
+        if (r && r.st === "x") totX++;
+      });
+    });
+  });
+  const pct = totT + totX ? Math.round(totT / (totT + totX) * 100) : null;
+  html += `<div class="card">
+    <div class="row-flex"><h2>Resumo da semana</h2><b style="font-size:20px;color:var(--primary)">${pct == null ? "—" : pct + "%"}</b></div>
+    <div class="barra" style="margin-top:8px"><div style="width:${pct || 0}%"></div></div>
+    <div class="stat-grid" style="margin-top:12px">
+      <div class="stat"><div class="n">${totT}</div><div class="l">✔ Tomadas</div></div>
+      <div class="stat"><div class="n" style="color:var(--danger)">${totX}</div><div class="l">✖ Não tomadas</div></div>
+      <div class="stat"><div class="n">${dias.length}</div><div class="l">Dias</div></div>
+    </div>
+    <p class="hint">Pendentes de hoje ainda não contam. Você pode corrigir qualquer dia clicando em ✔ ou ✖.</p>
+  </div>`;
+
+  dias.slice().reverse().forEach(dk => {
+    const progs = [];
+    state.meds.forEach(m => {
+      if (!doseDayActive(m, dk)) return;
+      scheduleOf(m).forEach(h => {
+        const r = rowOf(m, dk, h);
+        progs.push({ med: m, hora: h, st: r ? r.st : "p", ts: r && r.ts });
+      });
+    });
+    progs.sort((a, b) => a.hora - b.hora);
+    const t = progs.filter(x => x.st === "t").length;
+    const x = progs.filter(x => x.st === "x").length;
+    const p = progs.filter(x => x.st === "p").length;
+    const diaPct = t + x ? Math.round(t / (t + x) * 100) : null;
+    html += `<div class="card">
+      <div class="dia-head"><span>${fmtData(dk)}${dk === hoje() ? " <span class='badge bagde-t'>hoje</span>" : ""}</span>
+        <span class="small">${diaPct == null ? "—" : diaPct + "%"}</span></div>`;
+    if (!progs.length) html += `<div class="small muted">Sem doses programadas.</div>`;
+    const diaTag = (med) => {
+      if (!med.duracaoDias || !med.tratamentoInicio) return "";
+      if (dk < med.tratamentoInicio || dk > fimDe(med)) return "";
+      return `<span class="badge bagde-p" style="font-size:12px;padding:2px 8px">Dia ${diasEntre(med.tratamentoInicio, dk) + 1} de ${med.duracaoDias}</span>`;
+    };
+    progs.forEach(q => {
+      const badge = q.st === "t" ? `<span class="badge bagde-t">✔ Tomado ${q.ts ? fmtHoraTs(q.ts) : ""}</span>`
+        : q.st === "x" ? `<span class="badge bagde-x">✖ Não tomado</span>`
+        : (dk === hoje() ? `<span class="badge bagde-p">⏳ Pendente</span>` : `<span class="badge bagde-p">— não registrado</span>`);
+      html += `<div class="dose-row">
+        <div class="hora-big" style="font-size:20px;min-width:56px">${fmtMin(q.hora)}</div>
+        <div class="dose-info"><div class="dose-name" style="font-size:16px">${esc(q.med.nome)} ${diaTag(q.med)}</div></div>
+        <div class="dose-actions" style="align-items:center">
+          ${q.st === "t" || q.st === "x" ? badge : dk === hoje()
+            ? `<button class="btn ok tiny" data-action="mark" data-med="${q.med.id}" data-hora="${q.hora}" data-val="t" data-date="${dk}">✓ Tomei</button>
+               <button class="btn ghost tiny" data-action="mark" data-med="${q.med.id}" data-hora="${q.hora}" data-val="x" data-date="${dk}">✖ Não</button>`
+            : `<button class="btn ghost tiny" data-action="mark" data-med="${q.med.id}" data-hora="${q.hora}" data-val="t" data-date="${dk}">✓ Tomei</button>
+               <button class="btn ghost tiny" data-action="mark" data-med="${q.med.id}" data-hora="${q.hora}" data-val="x" data-date="${dk}">✖ Não</button>`}
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  return html;
+}
+
+/* ---------- aba Ajustes ---------- */
+function renderAjustes() {
+  const p = state.patient || {};
+  const c = state.config;
+  return `
+  <h1 style="font-size:24px;margin-bottom:12px">⚙️ Ajustes</h1>
+
+  <div class="card">
+    <div class="row-flex">
+      <div><h2>👤 Perfil do paciente</h2>
+        <p class="muted" style="margin-top:2px">${p.nome || "não definido"}${p.idade ? " • " + p.idade + " anos" : ""}${p.sexo === "M" ? " • Masculino" : p.sexo === "F" ? " • Feminino" : ""}</p>
+        ${p.obs ? `<p class="small muted">📝 ${esc(p.obs)}</p>` : ""}
+      </div>
+      <button class="btn ghost small" data-action="edit-perfil">✏️ Editar</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row-flex">
+      <div style="flex:1;min-width:200px">
+        <h2>🔔 Modo de controle</h2>
+        <p class="small muted" style="margin:4px 0 0"><b>Ligado:</b> alertas sonoros, confirmação de cada dose e histórico completo.<br>
+        <b>Desligado:</b> agenda simples — só a lista de remédios e horários, como uma receita.</p>
+      </div>
+      <label class="toggle"><input type="checkbox" id="tgControle" ${c.controlOn ? "checked" : ""}><span class="sl"></span></label>
+    </div>
+  </div>
+
+  <div class="card" id="cardControle" style="${c.controlOn ? "" : "opacity:.55;pointer-events:none"}">
+    <div class="row-flex">
+      <div><h2>🔊 Som do alerta</h2><p class="small muted">Toca quando está na hora de tomar.</p></div>
+      <label class="toggle"><input type="checkbox" id="tgSom" ${c.som ? "checked" : ""}><span class="sl"></span></label>
+    </div>
+    <label style="margin-top:14px">Repetir o alerta a cada</label>
+    <select id="selRepetir">
+      ${[5, 10, 15, 30, 60].map(m => `<option value="${m}"${c.repetirMin === m ? " selected" : ""}>${m} minutos</option>`).join("")}
+    </select>
+    <button class="btn ghost block" style="margin-top:14px" data-action="test-alert">🔔 Testar alerta</button>
+    <p class="hint">💡 Dica: mantenha esta página aberta no celular para ouvir os alertas. Você também pode adicionar à tela inicial (menu do navegador → “Adicionar à tela inicial”).</p>
+  </div>
+
+  <div class="card">
+    <h2>📲 Instalar no celular</h2>
+    <p class="small muted">Transforme o app em um aplicativo de verdade: ícone 💊 na tela inicial, tela cheia e acesso com um toque.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+      <button class="btn pri small" id="btnInstalar" data-action="install-now" style="display:none">📲 Instalar agora</button>
+      <button class="btn ghost small" data-action="install-guide">📖 Ver passo a passo</button>
+    </div>
+    <p class="hint" style="margin-top:8px">No iPhone e em navegadores sem o botão “Instalar”, siga o passo a passo — são 4 toques simples.</p>
+  </div>
+
+  <div class="card">
+    <h2>🗑 Zona de perigo</h2>
+    <p class="small muted">Apaga o perfil, todos os medicamentos, o histórico completo e as configurações. <b>Sem volta.</b><br>
+    Para proteger contra toques acidentais, será preciso digitar a frase de confirmação.</p>
+    <button class="btn danger block" data-action="danger-reset">Apagar todos os dados</button>
+  </div>
+
+  <p class="hint" style="text-align:center">💊 Hora do Remédio v1.0 — seus dados ficam somente neste aparelho.</p>`;
+
+}
+
+/* ---------- alertas ---------- */
+function tick() {
+  if (!state.config.controlOn) { renderAlertStack(); return; }
+  const dk = hoje();
+  const nowN = nowMin();
+  medsAtivos().filter(m => doseDayActive(m, dk)).forEach(med => {
+    scheduleOf(med).forEach(h => {
+      const r = rowOf(med, dk, h);
+      if (r && r.st !== "p") return;
+      const eff = effMin(med, dk, h);
+      const key = med.id + "|" + dk + "|" + h;
+      if (nowN < eff) return;
+      const a = ui.alertActive[key];
+      if (!a) {
+        ui.alertActive[key] = { at: Date.now() };
+        playBeep();
+        notify("💊 Hora do remédio!", med.nome + " — " + fmtMin(eff) + (med.dosagem ? " (" + med.dosagem + ")" : ""));
+        renderAlertStack();
+        toast("🔔 Hora de tomar " + med.nome);
+      } else {
+        if (Date.now() - a.at > state.config.repetirMin * 60000) {
+          a.at = Date.now();
+          playBeep();
+          renderAlertStack();
+        }
+      }
+    });
+  });
+  renderAlertStack();
+}
+
+function renderAlertStack() {
+  const box = $("#alertStack");
+  if (!box) return;
+  let html = "";
+  if (state.config.controlOn) {
+    const dk = hoje(), nowN = nowMin();
+    Object.keys(ui.alertActive).forEach(key => {
+      const [medId, d, h] = key.split("|");
+      const med = state.meds.find(x => x.id === medId);
+      if (!med || d !== dk || med.ativo === false || !doseDayActive(med, d)) { delete ui.alertActive[key]; return; }
+      if (ui.alertHidden[key] && ui.alertHidden[key] > Date.now()) return;
+      const r = rowOf(med, d, h);
+      if (r && r.st !== "p") { delete ui.alertActive[key]; return; }
+      const eff = effMin(med, d, h);
+      const over = nowN - eff;
+      const ago = over >= 90;
+      html += `<div class="alert-card${ago ? " pulse" : ""}">
+        <div class="alert-title">${ago ? "⚠️" : "🕐"} ${catIcon(med.categoria)} Hora de tomar: ${esc(med.nome)}${med.dosagem ? " (" + esc(med.dosagem) + ")" : ""}</div>
+        <div class="alert-sub${ago ? " over" : ""}">Horário: ${fmtMin(eff)}${ago ? " — atrasada há " + over + " min!" : ""}</div>
+        <div class="alert-btns">
+          <button class="btn ok small" data-action="mark" data-med="${medId}" data-hora="${h}" data-val="t" data-date="${dk}">✓ Já tomei</button>
+          <button class="btn warn small" data-action="snooze" data-med="${medId}" data-hora="${h}" data-date="${dk}">+10 min</button>
+          <button class="btn ghost small" data-action="mark" data-med="${medId}" data-hora="${h}" data-val="x" data-date="${dk}">✖ Não vou tomar</button>
+        </div>
+      </div>`;
+    });
+  }
+  box.innerHTML = html;
+}
+
+/* ---------- ações ---------- */
+function markTaken(medId, hora, val, dk) {
+  const med = state.meds.find(x => x.id === medId);
+  if (!med) return;
+  dk = dk || hoje();
+  if (val === "t") {
+    setRow(med, dk, hora, { st: "t", ts: Date.now(), adiar: (rowOf(med, dk, hora) || {}).adiar || 0 });
+    if (med.categoria === "antibiotico" && med.duracaoDias && !med.tratamentoInicio) {
+      med.tratamentoInicio = dk;
+      saveState();
+    }
+    const eff = fmtMin(effMin(med, dk, hora));
+    toast("✔ " + med.nome + " registrado às " + fmtHoraTs(Date.now()));
+  } else {
+    setRow(med, dk, hora, { st: "x", ts: Date.now(), adiar: 0 });
+    toast(med.nome + " marcado como não tomado");
+  }
+  const key = medId + "|" + dk + "|" + hora;
+  delete ui.alertActive[key];
+  delete ui.alertHidden[key];
+  saveState();
+  renderAlertStack();
+  renderAll();
+  /* aviso de prazo do tratamento (antibiótico e qualquer remédio com prazo) */
+  if (val === "t" && med.duracaoDias && med.tratamentoInicio) {
+    const rest = restantesDias(med);
+    if (rest > 1) setTimeout(() => toast("✔ " + med.nome + ": faltam " + rest + " dia" + (rest === 1 ? "" : "s") + " — continue!"), 1500);
+    else if (rest === 1) setTimeout(() => toast("✔ " + med.nome + ": é o último dia do tratamento!"), 1500);
+    else setTimeout(() => toast("🎉 Tratamento de " + med.nome + " concluído! Confirme com seu médico."), 1500);
+  }
+}
+function snooze(medId, hora, dk) {
+  const med = state.meds.find(x => x.id === medId);
+  if (!med) return;
+  dk = dk || hoje();
+  const r = rowOf(med, dk, hora) || { st: "p" };
+  r.st = "p";
+  r.adiar = (r.adiar || 0) + 10;
+  setRow(med, dk, hora, r);
+  const key = medId + "|" + dk + "|" + hora;
+  delete ui.alertActive[key];
+  ui.alertHidden[key] = Date.now() + 10 * 60000;
+  toast("⏰ " + med.nome + " adiado +10 min (" + fmtMin(effMin(med, dk, hora)) + ")");
+  saveState(); renderAlertStack(); renderAll();
+}
+
+/* ---------- zona de perigo: confirmação digitada ---------- */
+const FRASE_APAGAR = "apagar todo registro";
+
+function openDangerReset() {
+  openModal(`
+    <h2>⚠️ Apagar tudo <button class="x" data-action="close-modal">✕</button></h2>
+    <p style="font-size:17px">Esta ação <b>apaga para sempre</b> e zera o registro 100%:</p>
+    <div class="small" style="line-height:1.8">
+      👤 Perfil do paciente<br>
+      💊 Todos os medicamentos<br>
+      📈 Todo o histórico de tomadas<br>
+      ⚙️ Configurações de alerta
+    </div>
+    <div class="aviso red" style="margin-top:12px">Para confirmar, digite abaixo exatamente: <b>"Apagar todo registro"</b></div>
+    <label>Confirmação</label>
+    <input type="text" id="txtConfirma" placeholder="Apagar todo registro" autocomplete="off" autocapitalize="off">
+    <div style="display:flex;gap:10px;margin-top:18px">
+      <button class="btn ghost" data-action="close-modal" style="flex:1">Cancelar</button>
+      <button class="btn danger" id="btnResetYes" data-action="reset-yes" disabled style="flex:1;opacity:.55">Confirmar</button>
+    </div>`);
+  const inp = $("#txtConfirma");
+  const btn = $("#btnResetYes");
+  const norm = s => String(s || "").trim().toLowerCase().replace(/\s+/g, " ");
+  const upd = () => {
+    const ok = norm(inp.value) === FRASE_APAGAR;
+    btn.disabled = !ok;
+    btn.style.opacity = ok ? "1" : ".55";
+    inp.style.borderColor = ok ? "var(--ok)" : "";
+    inp.style.outline = ok ? "3px solid var(--ok)" : "";
+  };
+  inp.addEventListener("input", upd);
+  inp.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !btn.disabled) doResetAll();
+  });
+  inp.focus();
+}
+function doResetAll() {
+  state = JSON.parse(JSON.stringify(DEFAULTS));
+  ui.alertActive = {}; ui.alertHidden = {};
+  saveState(); closeModal(); renderAll();
+  toast("🗑 Todos os dados foram apagados — registro zerado 100%");
+}
+
+/* ---------- acompanhamento de antibiótico ---------- */
+/* ---------- prazo de tratamento (qualquer medicamento) ---------- */
+function addDias(dk, n) {
+  const d = new Date(dk + "T00:00:00");
+  d.setDate(d.getDate() + n);
+  return dateKey(d);
+}
+function diasEntre(a, b) {
+  return Math.round((new Date(b + "T00:00:00") - new Date(a + "T00:00:00")) / 86400000);
+}
+function fimDe(med) {
+  if (!med || !med.duracaoDias || !med.tratamentoInicio) return null;
+  return addDias(med.tratamentoInicio, med.duracaoDias - 1);
+}
+function restantesDias(med) {
+  const fim = fimDe(med);
+  if (fim == null) return null;
+  return Math.max(0, diasEntre(hoje(), fim) + 1);
+}
+function tratamentoStatus(med) {
+  if (!med || !med.duracaoDias || !med.tratamentoInicio) return null; // contínuo
+  if (med.tratamentoInicio > hoje()) return "futuro";
+  if (fimDe(med) < hoje()) return "concluido";
+  return "andamento";
+}
+function doseDayActive(med, dk) {
+  if (!med || !med.duracaoDias || !med.tratamentoInicio) return true; // contínuo
+  return med.tratamentoInicio <= dk && dk <= fimDe(med);
+}
+function diaDoTratamento(med) {
+  const st = tratamentoStatus(med);
+  if (st !== "andamento") return null;
+  return Math.max(1, Math.min(med.duracaoDias, med.duracaoDias - restantesDias(med) + 1));
+}
+function totalDoses(med) {
+  return med.duracaoDias ? scheduleOf(med).length * med.duracaoDias : null;
+}
+function descPrazo(med) {
+  const st = tratamentoStatus(med);
+  if (!med.duracaoDias || !med.tratamentoInicio) return "Contínuo";
+  if (st === "futuro") return "⏳ Começa em " + fmtDataCurto(med.tratamentoInicio) + " (" + med.duracaoDias + " dias)";
+  if (st === "concluido") return "🎉 Concluído em " + fmtDataCurto(fimDe(med)) + " (" + med.duracaoDias + " dias)";
+  const rest = restantesDias(med);
+  return "Em andamento: <b>faltam " + rest + " dias</b>" + (rest === 1 ? " (último dia!)" : "");
+}
+function antibInfo(med) {
+  const rest = restantesDias(med);
+  if (rest == null) return "";
+  if (rest > 1) return "🦠 Em andamento: <b>faltam " + rest + " dias</b> de tratamento";
+  if (rest === 1) return "🦠 <b>Último dia do tratamento!</b>";
+  return "🎉 Tratamento concluído (" + med.duracaoDias + " dias) — confirme com seu médico";
+}
+/* pausa automaticamente tratamentos encerrados (zera os alertas, mantém histórico) */
+function applyAutoPause() {
+  let mudou = false;
+  state.meds.forEach(med => {
+    if (tratamentoStatus(med) === "concluido" && med.ativo !== false) {
+      med.ativo = false;
+      mudou = true;
+      setTimeout(() => toast("🎉 " + med.nome + ": tratamento de " + med.duracaoDias + " dias concluído!"), 600);
+    }
+  });
+  if (mudou) saveState();
+}
+
+/* ---------- modal ---------- */
+function openModal(html) {
+  const w = $("#modalWrap");
+  w.innerHTML = `<div class="modal">${html}</div>`;
+  w.style.display = "flex";
+  document.body.style.overflow = "hidden";
+}
+function closeModal() {
+  $("#modalWrap").style.display = "none";
+  $("#modalWrap").innerHTML = "";
+  document.body.style.overflow = "";
+  ui.confirmCb = null;
+}
+function openConfirm(titulo, msg, cor, onYes) {
+  ui.confirmCb = onYes;
+  openModal(`
+    <h2>${titulo} <button class="x" data-action="close-modal">✕</button></h2>
+    <p style="font-size:17px">${msg}</p>
+    <div style="display:flex;gap:10px;margin-top:18px">
+      <button class="btn ghost" data-action="close-modal" style="flex:1">Cancelar</button>
+      <button class="btn ${cor || "danger"}" data-action="confirm-yes" style="flex:1">Sim, continuar</button>
+    </div>`);
+}
+
+/* ---------- delegação de eventos ---------- */
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-action]");
+  if (!el) return;
+  const a = el.dataset.action;
+  const medId = el.dataset.med, hora = el.dataset.hora, date = el.dataset.date, val = el.dataset.val;
+
+  switch (a) {
+    case "nav": setTab(el.dataset.tab); break;
+    case "onboarding": openOnboarding(false); break;
+    case "save-perfil": savePerfil(el.dataset.edit === "1"); break;
+    case "add-med": openMedForm(null); break;
+    case "edit-med": openMedForm(state.meds.find(x => x.id === medId)); break;
+    case "save-med": saveMed(); break;
+    case "del-med": {
+      const med = state.meds.find(x => x.id === medId);
+      openConfirm("Excluir medicamento?", `Tem certeza que deseja excluir <b>${esc(med ? med.nome : "")}</b> e todo o histórico dele?`, "danger", () => {
+        state.meds = state.meds.filter(x => x.id !== medId);
+        delete state.doses[medId];
+        delete ui.alertActive[medId];
+        saveState(); closeModal(); renderAll();
+        toast("🗑 Medicamento excluído");
+      });
+      break;
+    }
+    case "toggle-ativo": {
+      const med = state.meds.find(x => x.id === medId);
+      if (med) { med.ativo = med.ativo === false ? true : false; saveState(); renderAll(); }
+      break;
+    }
+    case "restart-med": {
+      const med = state.meds.find(x => x.id === medId);
+      if (med) {
+        med.ativo = true;
+        med.duracaoModo = "total";
+        med.tratamentoInicio = hoje();
+        saveState(); renderAll();
+        toast("▶ Novo tratamento de " + med.nome + " iniciado hoje (" + med.duracaoDias + " dias)");
+      }
+      break;
+    }
+    case "mark": markTaken(medId, hora, val, date); break;
+    case "snooze": snooze(medId, hora, date); break;
+    case "goto-ajustes": setTab("ajustes"); break;
+    case "edit-perfil": openOnboarding(true); break;
+    case "install-now": instalarAgora(); break;
+    case "install-guide": openGuiaInstalacao(); break;
+    case "print": imprimirAgenda(); break;
+    case "test-alert": playBeep(); notify("🔔 Teste de alerta", "É assim que o aviso de remédio aparece."); toast("🔔 Alerta de teste disparado!"); break;
+    case "close-modal": closeModal(); break;
+    case "confirm-yes": { const cb = ui.confirmCb; closeModal(); if (cb) cb(); break; }
+    case "reset":
+      openConfirm("Apagar tudo?", "Isso remove o perfil, TODOS os medicamentos e o histórico completo. Deseja continuar?", "danger", () => {
+        state = JSON.parse(JSON.stringify(DEFAULTS));
+        ui.alertActive = {}; ui.alertHidden = {};
+        saveState(); renderAll();
+        toast("🗑 Todos os dados foram apagados");
+      });
+      break;
+  }
+});
+
+/* toggles dos ajustes */
+document.addEventListener("change", e => {
+  if (e.target.id === "tgControle") {
+    state.config.controlOn = e.target.checked;
+    ui.alertActive = {}; ui.alertHidden = {};
+    saveState(); renderAll();
+    toast(e.target.checked ? "🔔 Controle LIGADO — alertas e confirmações ativos" : "📋 Modo Agenda — apenas a lista de horários");
+  }
+  if (e.target.id === "tgSom") {
+    state.config.som = e.target.checked;
+    saveState();
+    if (e.target.checked) { playBeep(); toast("🔊 Som ativado"); }
+  }
+  if (e.target.id === "selRepetir") {
+    state.config.repetirMin = parseInt(e.target.value);
+    ui.alertActive = {}; ui.alertHidden = {};
+    saveState(); toast("⏰ Alerta repetirá a cada " + state.config.repetirMin + " min");
+  }
+});
+
+/* ---------- impressão da agenda ---------- */
+function imprimirAgenda() {
+  try {
+    const p = state.patient;
+    document.getElementById("printArea").innerHTML = `
+      <h1 style="font-size:22px">💊 Agenda de medicamentos — ${p ? esc(p.nome) : ""}</h1>
+      <p style="font-size:14px;color:#555">${p && p.idade ? p.idade + " anos • " : ""}${p && p.sexo === "M" ? "Masculino" : p && p.sexo === "F" ? "Feminino" : ""}${p && p.obs ? "<br>Obs.: " + esc(p.obs) : ""}<br>Gerada em ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</p>
+      <table class="agenda" style="margin-top:12px"><tr><th>Medicamento</th><th>Horários</th><th>Frequência</th></tr>
+      ${state.meds.map(m => `<tr><td><b>${esc(m.nome)}</b> ${m.dosagem ? "<br><span style='font-size:13px;color:#555'>" + esc(m.dosagem) + "</span>" : ""} ${m.instrucoes ? "<br><span style='font-size:13px;color:#555'>" + esc(m.instrucoes) + "</span>" : ""} ${m.duracaoDias && m.tratamentoInicio ? "<br><span style='font-size:13px;color:#555'>" + descPrazo(m) + " • início " + fmtDataCurto(m.tratamentoInicio) + "</span>" : ""}</td><td>${scheduleOf(m).map(t => fmtMin(t)).join(" • ")}</td><td>${descFreq(m)}</td></tr>`).join("")}
+      </table>`;
+    window.print();
+  } catch (e) {
+    toast("Impressão indisponível neste navegador");
+  }
+}
+
+/* ---------- instalação como aplicativo (PWA) ---------- */
+let deferredPrompt = null;
+window.addEventListener("beforeinstallprompt", e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const b = document.getElementById("btnInstalar");
+  if (b) b.style.display = "";
+});
+window.addEventListener("appinstalled", () => {
+  deferredPrompt = null;
+  toast("📲 App instalado! O ícone 💊 está na tela inicial.");
+});
+function instalarAgora() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(r => {
+      if (r.outcome === "accepted") toast("📲 Instalando... acompanhe na tela.");
+      deferredPrompt = null;
+      const b = document.getElementById("btnInstalar");
+      if (b) b.style.display = "none";
+    }).catch(() => {});
+  } else {
+    openGuiaInstalacao();
+  }
+}
+function openGuiaInstalacao() {
+  openModal(`
+    <h2>📲 Instalar no celular <button class="x" data-action="close-modal">✕</button></h2>
+    <p style="font-size:16px">Assim o app vira um aplicativo de verdade: <b>ícone 💊 na tela inicial</b>, tela cheia e acesso em 1 toque — sem loja, sem conta.</p>
+    <div class="aviso blue" style="margin-top:10px">⚠️ <b>Importante:</b> faça isso no <b>navegador do celular</b> — Safari no iPhone, Chrome no Android.</div>
+
+    <label style="margin-top:16px">🍏 No iPhone (Safari)</label>
+    <div class="small" style="line-height:2">
+      1. Abra o app no Safari<br>
+      2. Toque no botão <b>Compartilhar</b> <span style="font-size:22px">⬆️</span> (caixa com seta, na barra de baixo)<br>
+      3. Role a lista e toque em <b>“Adicionar à Tela de Início”</b><br>
+      4. Toque em <b>“Adicionar”</b> (canto superior direito)
+    </div>
+
+    <label style="margin-top:16px">🤖 No Android (Chrome)</label>
+    <div class="small" style="line-height:2">
+      1. Abra o app no Chrome<br>
+      2. Toque nos <b>três pontinhos</b> <span style="font-size:22px">⋮</span> (canto superior direito)<br>
+      3. Toque em <b>“Instalar aplicativo”</b> (ou “Adicionar à tela inicial”)<br>
+      4. Toque em <b>“Instalar”</b>
+    </div>
+
+    <div class="aviso" style="margin-top:14px">💡 <b>Pronto!</b> Da próxima vez, é só tocar no ícone 💊. O app avisa na hora do remédio, mesmo sem você abrir manualmente (enquanto o alerta estiver ativo e, no Android, com permissão de notificação).</div>
+  `);
+}
+
+/* ---------- inicialização ---------- */
+renderAll();
+tick();
+setInterval(tick, 15000);
+if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+  window.addEventListener("load", () => {
+    try { navigator.serviceWorker.register("sw.js").catch(() => {}); } catch (e) {}
+  });
+}
+</script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a350305b3f37c075',t:'MTc4ODM5MDYzNA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
