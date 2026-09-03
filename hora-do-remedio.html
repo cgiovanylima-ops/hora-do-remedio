@@ -464,6 +464,7 @@ function renderAll() {
   else if (ui.tab === "historico") m.innerHTML = renderHistorico();
   else m.innerHTML = renderAjustes();
   wireHomeCountdown();
+  if (ui.tab === "ajustes") setTimeout(refreshPushCard, 300);
 }
 
 /* ---------- onboarding ---------- */
@@ -1074,6 +1075,13 @@ function renderAjustes() {
     <p class="hint">💡 Dica: mantenha esta página aberta no celular para ouvir os alertas. Com o <b>push ativado</b> (veja como no guia PUSH), o celular avisa com som <b>mesmo com o app fechado</b>. Você também pode adicionar à tela inicial (menu do navegador → “Adicionar à tela inicial”).</p>
   </div>
 
+  <div class="card" id="cardPush" style="${PUSH.appId ? "" : "display:none"}">
+    <h2>🔔 Alertas com o app fechado</h2>
+    <p class="small muted" id="pushStatusTxt">Serviço de alertas carregando...</p>
+    <button class="btn pri block" id="btnPushAtivar" data-action="push-activate" style="margin-top:10px">🔔 Ativar alertas com o app fechado</button>
+    <p class="hint" style="margin-top:8px">Com os alertas ativados, o celular toca a hora do remédio <b>mesmo com o app fechado</b> (precisa de internet no momento do aviso).</p>
+  </div>
+
   <div class="card">
     <h2>📲 Instalar no celular</h2>
     <p class="small muted">Transforme o app em um aplicativo de verdade: ícone 💊 na tela inicial, tela cheia e acesso com um toque.</p>
@@ -1382,6 +1390,7 @@ document.addEventListener("click", e => {
     case "edit-perfil": openOnboarding(true); break;
     case "install-now": instalarAgora(); break;
     case "install-guide": openGuiaInstalacao(); break;
+    case "push-activate": ativarPush(); break;
     case "print": imprimirAgenda(); break;
     case "test-alert": playBeep(); notify("🔔 Teste de alerta", "É assim que o aviso de remédio aparece."); toast("🔔 Alerta de teste disparado!"); break;
     case "close-modal": closeModal(); break;
@@ -1492,7 +1501,19 @@ async function pushInit() {
     const OS = window.OneSignal;
     if (!OS) return;
     try { await OS.login(pushExternalId()); } catch (e) {}
+    /* acompanha quando o usuário libera a permissão */
+    try {
+      if (OS.Notifications && OS.Notifications.addEventListener) {
+        OS.Notifications.addEventListener("permissionChange", (ev) => {
+          if (ev && ev.current === "granted") {
+            toast("🔔 Alertas ativados! O app vai avisar mesmo fechado.");
+            schedulePushSync(); refreshPushCard(); renderAll();
+          }
+        });
+      }
+    } catch (e) {}
     schedulePushSync();
+    setTimeout(refreshPushCard, 800);
   } catch (e) { /* silencioso: o app continua normal sem push */ }
 }
 function pedirPermissaoPush() {
@@ -1500,8 +1521,63 @@ function pedirPermissaoPush() {
     const OS = window.OneSignal;
     if (!OS || !PUSH.appId || !OS.Notifications) return;
     if (OS.Notifications.permission === "granted") return;
-    if (OS.Notifications.requestPermission) OS.Notifications.requestPermission();
+    if (OS.Notifications.permission === "denied") return;
+    if (OS.Notifications.requestPermission) OS.Notifications.requestPermission().catch(() => {});
+    else if (OS.Slidedown && OS.Slidedown.promptPush) OS.Slidedown.promptPush({ force: true });
   } catch (e) {}
+}
+function pushStatus() {
+  try {
+    const OS = window.OneSignal;
+    if (!OS || !OS.Notifications) return "indisponivel";
+    const p = OS.Notifications.permission;
+    if (p === "granted") return "on";
+    if (p === "denied") return "bloqueado";
+    return "pendente";
+  } catch (e) { return "indisponivel"; }
+}
+function ativarPush() {
+  try {
+    const OS = window.OneSignal;
+    if (!OS || !OS.Notifications) { toast("⚠️ Serviço de alertas ainda carregando — aguarde 5s e toque de novo"); return; }
+    const p = OS.Notifications.permission;
+    if (p === "granted") { toast("🔔 Alertas já ativados!"); return; }
+    if (p === "denied") {
+      toast("⚠️ Notificações bloqueadas neste navegador. Abra: cadeado 🔒 na barra → Notificações → Permitir");
+      return;
+    }
+    if (OS.Notifications.requestPermission) {
+      OS.Notifications.requestPermission().then(r => {
+        if (r === "granted") {
+          toast("🔔 Alertas ativados! O app agora avisa mesmo fechado.");
+          schedulePushSync(); refreshPushCard(); renderAll();
+        } else {
+          toast("⚠️ Toque em Permitir quando o navegador perguntar");
+        }
+      }).catch(() => {});
+    } else if (OS.Slidedown && OS.Slidedown.promptPush) {
+      OS.Slidedown.promptPush({ force: true });
+    }
+  } catch (e) {}
+}
+function refreshPushCard() {
+  const el = document.getElementById("pushStatusTxt");
+  const b = document.getElementById("btnPushAtivar");
+  if (!el) return;
+  const st = pushStatus();
+  if (st === "on") {
+    el.innerHTML = "<b style='color:var(--ok)'>✔ Ativado!</b> O celular vai tocar a hora do remédio mesmo com o app fechado.";
+    if (b) { b.style.display = "none"; }
+  } else if (st === "bloqueado") {
+    el.innerHTML = "<b style='color:var(--danger)'>⛔ Bloqueado.</b> Libere no navegador: cadeado 🔒 → Notificações → Permitir.";
+    if (b) { b.style.display = "none"; }
+  } else if (st === "pendente") {
+    el.innerHTML = "Toque no botão abaixo para o celular pedir permissão (é só uma vez).";
+    if (b) { b.style.display = ""; b.textContent = "🔔 Ativar alertas com o app fechado"; }
+  } else {
+    el.innerHTML = "Serviço de alertas carregando...";
+    if (b) { b.style.display = ""; b.textContent = "🔔 Ativar alertas com o app fechado"; }
+  }
 }
 function pushSync() {
   if (!PUSH.workerUrl || !PUSH.appId || !state.patient) return;
@@ -1595,5 +1671,5 @@ if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
   });
 }
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a35223b7ef7faf56',t:'MTc4ODQxMTA4OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3523fcbf82b2550',t:'MTc4ODQxMjIzOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
