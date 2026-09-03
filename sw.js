@@ -1,6 +1,11 @@
 /* Hora do Remédio — Service Worker
-   Deixa o app funcionar offline e ser instalável como aplicativo. */
-const CACHE = "hora-do-remedio-v2";
+   Deixa o app funcionar offline e ser instalável como aplicativo.
+   v3: integração com OneSignal (importa o worker do OneSignal). */
+try {
+  importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDKWorker.js");
+} catch (e) { /* se o CDN falhar, o resto continua funcionando */ }
+
+const CACHE = "hora-do-remedio-v3";
 const ASSETS = [
   "./",
   "./hora-do-remedio.html",
