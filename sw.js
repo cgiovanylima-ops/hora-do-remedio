@@ -1,12 +1,12 @@
 /* Hora do Remédio — Service Worker
-   v4: network-first no HTML (sempre busca a versão nova na internet)
-       cache-only nos ícones/manifest (leves, estáticos).
-   Integra o OneSignal (importa o worker deles). */
+   v5: usa o worker CLÁSSICO do OneSignal (compatível com mais aparelhos)
+       network-first no HTML (sempre busca a versão nova na internet)
+       cache-only nos ícones/manifest (leves, estáticos). */
 try {
-  importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDKWorker.js");
+  importScripts("https://cdn.onesignal.com/sdks/OneSignalSDKWorker.js");
 } catch (e) { /* se o CDN falhar, o resto continua funcionando */ }
 
-const CACHE = "hora-do-remedio-v4";
+const CACHE = "hora-do-remedio-v5";
 const ASSETS = [
   "./",
   "./index.html",

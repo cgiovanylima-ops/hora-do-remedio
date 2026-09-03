@@ -1470,55 +1470,79 @@ function pushExternalId() {
   }
   return state.config.pushId;
 }
+function uaCurto() {
+  const u = navigator.userAgent || "";
+  if (/Android/i.test(u)) return "Android " + ((u.match(/Android [\d.]+/) || [""])[0]).replace("Android ", "");
+  if (/iPhone|iPad/i.test(u)) return "iOS";
+  if (/CrOS/i.test(u)) return "ChromeOS";
+  if (/Windows/i.test(u)) return "Windows";
+  if (/Mac OS X/i.test(u)) return "macOS";
+  if (/Linux/i.test(u)) return "Linux";
+  return "desconhecido";
+}
+function suportePush() {
+  let sw = false, pm = false, appKey = false;
+  try { sw = ("serviceWorker" in navigator); } catch (e) {}
+  try { pm = ("PushManager" in window); } catch (e) {}
+  try { appKey = typeof PushSubscriptionOptions !== "undefined" && PushSubscriptionOptions.prototype && PushSubscriptionOptions.prototype.hasOwnProperty("applicationServerKey"); } catch (e) {}
+  return { sw: sw, pm: pm, appKey: appKey };
+}
+function pushDiag() {
+  const sup = suportePush();
+  let st = "Web Push: " + (sup.sw && sup.pm && sup.appKey ? "suportado ✓" : "NÃO suportado (SW=" + sup.sw + ", Push=" + sup.pm + ", appKey=" + sup.appKey + ")");
+  st += " • navegador: " + uaCurto();
+  if (pushDiagMsg) st += " • " + pushDiagMsg;
+  return st;
+}
 function loadOneSignalSdk() {
   return new Promise((res) => {
-    if (window.OneSignal) { res(); return; }
-    if (!document.querySelector('script[src*="OneSignalSDK.page.js"]')) {
+    if (window.OneSignal && typeof window.OneSignal.push === "function") { res(); return; }
+    if (!document.querySelector('script[src*="OneSignalSDK.js"]')) {
       const s = document.createElement("script");
-      s.src = "https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js";
+      s.src = "https://cdn.onesignal.com/sdks/OneSignalSDK.js";
       s.async = true;
-      s.defer = true;
       s.onload = res;
       s.onerror = () => res();
       document.head.appendChild(s);
     } else res();
   });
 }
-let osInited = false, osReady = false;
+let osInited = false, osReady = false, pushDiagMsg = "";
 async function ensureOneSignal() {
   if (osReady) return true;
   try {
     await loadOneSignalSdk();
+    if (!window.OneSignal || typeof window.OneSignal.push !== "function") { pushDiagMsg = "SDK OneSignal não carregou"; return false; }
     const OS = window.OneSignal;
-    if (!OS || typeof OS.init !== "function") return false;
-    /* escuta de permissão (aviso quando o usuário liberar) */
-    try {
-      if (OS.Notifications && typeof OS.Notifications.addEventListener === "function") {
-        OS.Notifications.addEventListener("permissionChange", (ev) => {
-          if (ev && ev.current === "granted") {
-            toast("🔔 Alertas ativados! O app vai avisar mesmo fechado.");
-            schedulePushSync(); refreshPushCard();
-          }
-        });
-      }
-    } catch (e) {}
     if (!osInited) {
       osInited = true;
-      try { await OS.init({ appId: PUSH.appId }); }
-      catch (e) { osInited = false; return false; }
+      await new Promise((resolve) => {
+        try {
+          OS.push(() => {
+            try {
+              OS.init({ appId: PUSH.appId, serviceWorkerPath: "sw.js", notifyButton: { enable: false } });
+            } catch (e) {}
+            resolve();
+          });
+        } catch (e) { resolve(); }
+        setTimeout(resolve, 5000);
+      });
+    }
+    let tent = 0;
+    while (tent < 20 && !(typeof OS.getNotificationPermission === "function" || typeof OS.isPushNotificationsEnabled === "function")) {
+      await new Promise(r => setTimeout(r, 400));
+      tent++;
+    }
+    if (typeof OS.getNotificationPermission !== "function" && typeof OS.isPushNotificationsEnabled !== "function") {
+      pushDiagMsg = "SDK carregou, mas a API de notificações não respondeu neste navegador";
+      return false;
     }
     osReady = true;
     return true;
-  } catch (e) { return false; }
-}
-function pushDiag() {
-  try {
-    const OS = window.OneSignal;
-    if (!OS) return "Diagnóstico: SDK do OneSignal NÃO carregou (verifique a internet)";
-    let perm = "?";
-    try { perm = OS.Notifications ? (OS.Notifications.permission || "?") : "?"; } catch (e) {}
-    return "Diagnóstico: SDK ok • permissão do navegador: " + (perm === "default" ? "aguardando" : perm) + (osReady ? " • conectado ✓" : " • conexão pendente");
-  } catch (e) { return "Diagnóstico: erro ao ler o estado"; }
+  } catch (e) {
+    pushDiagMsg = "erro: " + ((e && e.message) || e);
+    return false;
+  }
 }
 async function pushInit() {
   if (pushInited || !PUSH.appId || !state.patient) return;
@@ -1526,7 +1550,7 @@ async function pushInit() {
   try {
     if (await ensureOneSignal()) {
       const OS = window.OneSignal;
-      try { await OS.login(pushExternalId()); } catch (e) {}
+      try { if (typeof OS.setExternalUserId === "function") OS.setExternalUserId(pushExternalId()); } catch (e) {}
       schedulePushSync();
     }
   } catch (e) {}
@@ -1538,9 +1562,10 @@ function pedirPermissaoPush() {
       if (!PUSH.appId) return;
       if (await ensureOneSignal()) {
         const OS = window.OneSignal;
-        if (OS.Notifications && OS.Notifications.permission === "default") {
-          try { await OS.Notifications.requestPermission(); } catch (e) {}
-        }
+        try {
+          if (typeof OS.registerForPushNotifications === "function") await OS.registerForPushNotifications();
+          else if (typeof OS.showSlidedownPrompt === "function") OS.showSlidedownPrompt();
+        } catch (e) {}
       }
     } catch (e) {}
   })();
@@ -1548,8 +1573,8 @@ function pedirPermissaoPush() {
 function pushStatus() {
   try {
     const OS = window.OneSignal;
-    if (!OS || !OS.Notifications) return "indisponivel";
-    const p = OS.Notifications.permission;
+    if (!OS || typeof OS.getNotificationPermission !== "function") return "indisponivel";
+    const p = OS.getNotificationPermission();
     if (p === "granted") return "on";
     if (p === "denied") return "bloqueado";
     return "pendente";
@@ -1557,37 +1582,43 @@ function pushStatus() {
 }
 async function ativarPush() {
   try {
+    const sup = suportePush();
+    if (!sup.sw || !sup.pm || !sup.appKey) {
+      pushDiagMsg = "navegador sem suporte a push (SW=" + sup.sw + ", PushManager=" + sup.pm + ", appKey=" + sup.appKey + ")";
+      toast("⚠️ Este navegador não suporta alertas. Use o Chrome atualizado do celular.");
+      refreshPushCard();
+      return;
+    }
     toast("⏳ Conectando ao serviço de alertas...");
     const ok = await ensureOneSignal();
-    const OS = window.OneSignal;
-    if (!ok || !OS || !OS.Notifications) {
-      toast("⚠️ Serviço de alertas não respondeu. Verifique a internet e toque de novo.");
-      refreshPushCard(); return;
+    if (!ok) {
+      toast("⚠️ " + (pushDiagMsg || "Serviço de alertas não respondeu. Tente de novo."));
+      refreshPushCard();
+      return;
     }
-    const p = OS.Notifications.permission;
-    if (p === "granted") {
+    const OS = window.OneSignal;
+    const p = pushStatus();
+    if (p === "on") {
       toast("🔔 Alertas já ativados!");
-      schedulePushSync(); refreshPushCard(); return;
+      schedulePushSync(); refreshPushCard();
+      return;
     }
     if (p === "denied") {
-      toast("⚠️ Bloqueado. Libere no Chrome: cadeado 🔒 → Notificações → Permitir");
-      refreshPushCard(); return;
+      toast("⚠️ Bloqueado. Libere no navegador: cadeado 🔒 → Notificações → Permitir");
+      refreshPushCard();
+      return;
     }
-    /* pede a permissão agora (com o SDK pronto) */
-    try {
-      if (typeof OS.Notifications.requestPermission === "function") {
-        const r = await OS.Notifications.requestPermission();
-        if (r === "granted") {
-          toast("🔔 Alertas ativados! O celular vai tocar mesmo com o app fechado.");
-          schedulePushSync(); refreshPushCard();
-        } else if (r === "denied") {
-          toast("⚠️ Bloqueado. Libere no Chrome: cadeado 🔒 → Notificações → Permitir");
-        } else {
-          toast("⚠️ Nenhuma confirmação do navegador. Certifique-se de tocar em PERMITIR.");
-        }
-      }
-    } catch (e) {
-      toast("⚠️ O pedido de permissão não abriu. Feche o app, abra de novo e toque outra vez.");
+    if (typeof OS.registerForPushNotifications === "function") {
+      try { await OS.registerForPushNotifications(); } catch (e) {}
+    } else if (typeof OS.showSlidedownPrompt === "function") {
+      try { OS.showSlidedownPrompt(); } catch (e) {}
+    }
+    await new Promise(r => setTimeout(r, 2500));
+    if (pushStatus() === "on") {
+      toast("🔔 Alertas ativados! O celular vai tocar mesmo com o app fechado.");
+      schedulePushSync();
+    } else {
+      toast("⚠️ Toque em PERMITIR quando o navegador perguntar.");
     }
     refreshPushCard();
   } catch (e) {
@@ -1599,13 +1630,15 @@ function refreshPushCard() {
   const el = document.getElementById("pushStatusTxt");
   const dg = document.getElementById("pushDiagTxt");
   const b = document.getElementById("btnPushAtivar");
-  if (dg) dg.textContent = pushDiag();
+  let nat = "n/a";
+  try { if ("Notification" in window) nat = Notification.permission; } catch (e) {}
+  if (dg) dg.textContent = pushDiag() + (nat !== "n/a" ? " • navegador: " + nat : "");
   if (!el) return;
   const st = pushStatus();
-  if (st === "on") {
+  if (st === "on" || nat === "granted") {
     el.innerHTML = "<b style='color:var(--ok)'>✔ Ativado!</b> O celular vai tocar a hora do remédio mesmo com o app fechado.";
     if (b) { b.style.display = "none"; }
-  } else if (st === "bloqueado") {
+  } else if (st === "bloqueado" || nat === "denied") {
     el.innerHTML = "<b style='color:var(--danger)'>⛔ Bloqueado.</b> Libere no navegador: cadeado 🔒 → Notificações → Permitir.";
     if (b) { b.style.display = "none"; }
   } else if (st === "pendente") {
@@ -1708,5 +1741,5 @@ if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
   });
 }
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a35276cfcd20d995',t:'MTc4ODQxNDQ5Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a352863b4d8d4835',t:'MTc4ODQxNTEyMw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
